@@ -21,13 +21,8 @@ Integrate your Magento 2 store with the IVO Marketplace platform. Automatically 
 This is the official Magento-recommended way to install extensions.
 
 ```bash
-# Add the IVO repository (run once)
-composer config repositories.ivo composer https://packages.ivo.md
-
-# Install the extension
 composer require ivo/module-marketplace
 
-# Enable and set up
 bin/magento module:enable Ivo_Marketplace --clear-static-content
 bin/magento setup:upgrade
 bin/magento setup:di:compile
