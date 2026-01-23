@@ -1,0 +1,25 @@
+{
+    "name": "ivo/module-marketplace",
+    "description": "IVO Marketplace integration for Magento 2 - Sync products and manage offers",
+    "type": "magento2-module",
+    "license": "proprietary",
+    "version": "1.0.2",
+    "authors": [
+        {
+            "name": "IVO Team",
+            "email": "support@ivo.md"
+        }
+    ],
+    "require": {
+        "php": ">=7.4",
+        "magento/framework": ">=103.0"
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "Ivo\\Marketplace\\": ""
+        }
+    }
+}

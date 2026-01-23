@@ -1,0 +1,9 @@
+# Development files
+.DS_Store
+*.log
+*.bak
+.idea/
+.vscode/
+
+# Build artifacts (dist is in main project, not here)
+dist/

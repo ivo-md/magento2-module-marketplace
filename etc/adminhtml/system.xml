@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+    <system>
+        <tab id="ivo" translate="label" sortOrder="100">
+            <label>IVO Marketplace</label>
+        </tab>
+        <section id="ivo_marketplace" translate="label" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+            <class>separator-top</class>
+            <label>Configuration</label>
+            <tab>ivo</tab>
+            <resource>Ivo_Marketplace::config</resource>
+            <group id="general" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Settings</label>
+                <field id="api_key" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>API Key</label>
+                    <frontend_model>Ivo\Marketplace\Block\Adminhtml\System\Config\ApiKey</frontend_model>
+                    <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
+                </field>
+                <field id="configured" translate="label" type="hidden" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Configured</label>
+                </field>
+                <field id="merchant_point_id" translate="label" type="select" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Merchant Point</label>
+                    <source_model>Ivo\Marketplace\Model\Config\Source\MerchantPoints</source_model>
+                </field>
+                 <field id="actions_render" translate="label" type="text" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label></label>
+                    <frontend_model>Ivo\Marketplace\Block\Adminhtml\System\Config\Actions</frontend_model>
+                </field>
+            </group>
+        </section>
+    </system>
+</config>

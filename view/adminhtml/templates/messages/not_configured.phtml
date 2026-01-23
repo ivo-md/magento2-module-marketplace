@@ -1,0 +1,5 @@
+<?php
+/** @var \Magento\Framework\View\Element\Template $block */
+$url = $block->getData('url');
+?>
+<?= $block->escapeHtml(__('IVO Marketplace is not configured.')) ?> <a href="<?= $block->escapeUrl($url) ?>"><?= $block->escapeHtml(__('Configure Plugin')) ?></a>
