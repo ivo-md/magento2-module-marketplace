@@ -18,8 +18,8 @@ class Config extends AbstractHelper
     const CONFIG_PATH_MERCHANT_POINT_ID = 'ivo_marketplace/general/merchant_point_id';
     
     // IVO Endpoints - Hardcoded, not user-configurable
-    const URL_SETUP = 'https://ivo.md/merchant/plugin/setup';
-    const API_BASE_URL = 'https://api.ivo.md';
+    const URL_SETUP = 'http://localhost:83/merchant/plugin/setup';
+    const API_BASE_URL = 'https://api-web:8443';
 
     protected $_storeManager;
     protected $_configWriter;
@@ -214,6 +214,54 @@ class Config extends AbstractHelper
         curl_close($ch);
         
         return ['code' => $httpCode, 'response' => json_decode($response, true)];
+    }
+
+    /**
+     * Check if the API key is valid by calling /v1/merchant-api/check
+     * @param string|null $apiKey - if null, uses stored API key
+     * @return array - returns merchant info array with 'error' key if failed, or merchant data if valid
+     */
+    public function checkApiKey($apiKey = null)
+    {
+        if ($apiKey === null) {
+            $apiKey = $this->getApiKey();
+        }
+        if (!$apiKey) {
+            return ['error' => 'No API key configured'];
+        }
+
+        $url = self::API_BASE_URL . "/v1/merchant-api/check";
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        $headers = [
+            "Authorization: Bearer " . $apiKey,
+            "Accept: application/json",
+        ];
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+
+        if ($curlError) {
+            return ['error' => 'cURL error: ' . $curlError];
+        }
+
+        if ($httpCode !== 200) {
+            return ['error' => 'HTTP ' . $httpCode . ' - ' . substr($response, 0, 200)];
+        }
+
+        $data = json_decode($response, true);
+        if (!$data || !isset($data['merchant_id'])) {
+            return ['error' => 'Invalid API response: ' . substr($response, 0, 200)];
+        }
+
+        return $data;
     }
 
     public function getProductIvoInfo($sku)
