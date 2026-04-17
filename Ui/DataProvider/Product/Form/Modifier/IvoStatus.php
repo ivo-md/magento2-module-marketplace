@@ -195,6 +195,8 @@ class IvoStatus extends AbstractModifier
                         success: function(res) {
                             if(res.status === 'success') {
                                 $('#ivo_sync_message').text(res.message).css('color', 'green');
+                                $('#ivo_sync_message').append(' <span style=\"color:#666;\">Refreshing status...</span>');
+                                setTimeout(function() { location.reload(); }, 5000);
                             } else {
                                 $('#ivo_sync_message').text(res.message).css('color', 'red');
                             }

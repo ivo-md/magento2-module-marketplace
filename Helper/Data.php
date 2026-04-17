@@ -63,7 +63,7 @@ class Data extends AbstractHelper
             'url_shop' => $baseUrl,
             'url_return' => $returnUrl,
             'platform' => 'magento',
-            'version' => '1.0.0',
+            'version' => '1.0.5',
             'server_ip' => $_SERVER['SERVER_ADDR'] ?? '127.0.0.1',
             'server_os' => php_uname('s')
         ];

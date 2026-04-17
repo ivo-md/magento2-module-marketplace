@@ -43,6 +43,10 @@ class Sync extends Action
                 return $result->setData(['status' => 'error', 'message' => 'Could not prepare payload or Merchant Point ID missing']);
             }
 
+            if ((float)$product->getPrice() < 0.01) {
+                return $result->setData(['status' => 'error', 'message' => 'Product cannot be synced. Please ensure it has a valid price.']);
+            }
+
             // Sync
             $syncResult = $this->helper->syncProducts([$payload]);
             

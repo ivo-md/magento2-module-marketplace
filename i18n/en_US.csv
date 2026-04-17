@@ -38,3 +38,5 @@
 "An error occurred during import.","An error occurred during import."
 "The offer was deleted from the marketplace.","The offer was deleted from the marketplace."
 "Unknown status","Unknown status"
+"Refreshing status...","Refreshing status..."
+"Product cannot be synced. Please ensure it has a valid price.","Product cannot be synced. Please ensure it has a valid price."

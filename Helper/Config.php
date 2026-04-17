@@ -83,7 +83,7 @@ class Config extends AbstractHelper
             'url_shop' => $baseUrl,
             'url_return' => $returnUrl,
             'platform' => 'magento',
-            'version' => '1.0.0',
+            'version' => '1.0.5',
             'ip_server' => $_SERVER['SERVER_ADDR'] ?? '127.0.0.1',
             'os_server' => php_uname('s')
         ];
@@ -180,8 +180,44 @@ class Config extends AbstractHelper
             'currency' => $currencyCode,
             'availability' => $qty,
             'merchant_point_id' => $merchantPointId,
-            'merchant_internal_id' => $product->getSku()
+            'merchant_internal_id' => $product->getSku(),
+            'images' => $this->getProductImages($product),
         ];
+    }
+
+    /**
+     * Get product images (base + media gallery)
+     * Returns array of full image URLs
+     */
+    public function getProductImages($product)
+    {
+        $images = [];
+        
+        try {
+            $store = $this->_storeManager->getStore();
+            $baseUrl = $store->getBaseUrl(\Magento\Framework\UrlInterface::URL_TYPE_MEDIA) . 'catalog/product';
+            
+            // Main image
+            $mainImage = $product->getImage();
+            if ($mainImage && $mainImage !== 'no_selection') {
+                $images[] = $baseUrl . $mainImage;
+            }
+            
+            // Gallery images
+            $mediaGallery = $product->getMediaGalleryImages();
+            if ($mediaGallery) {
+                foreach ($mediaGallery as $image) {
+                    $url = $image->getUrl();
+                    if ($url && !in_array($url, $images)) {
+                        $images[] = $url;
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            // Silently ignore image errors
+        }
+        
+        return $images;
     }
 
     public function syncProducts($productsData, $mode = 'async')
