@@ -7,27 +7,23 @@ use Magento\Backend\App\Action\Context;
 use Magento\Framework\App\Action\HttpGetActionInterface;
 use Ivo\Marketplace\Helper\Config;
 use Magento\Catalog\Model\ResourceModel\Product\CollectionFactory;
-use Magento\CatalogInventory\Api\StockRegistryInterface;
-use Magento\Store\Model\StoreManagerInterface;
+use Magento\Catalog\Api\ProductRepositoryInterface;
 
 class All extends Action implements HttpGetActionInterface
 {
     protected $_ivoHelper;
     protected $_productCollectionFactory;
-    protected $_stockRegistry;
-    protected $_storeManager;
+    protected $_productRepository;
 
     public function __construct(
         Context $context,
         Config $helper,
         CollectionFactory $productCollectionFactory,
-        StockRegistryInterface $stockRegistry,
-        StoreManagerInterface $storeManager
+        ProductRepositoryInterface $productRepository
     ) {
         $this->_ivoHelper = $helper;
         $this->_productCollectionFactory = $productCollectionFactory;
-        $this->_stockRegistry = $stockRegistry;
-        $this->_storeManager = $storeManager;
+        $this->_productRepository = $productRepository;
         parent::__construct($context);
     }
 
@@ -40,29 +36,23 @@ class All extends Action implements HttpGetActionInterface
             }
 
             $collection = $this->_productCollectionFactory->create();
-            $collection->addAttributeToSelect(['name', 'price', 'sku']);
+            $collection->addAttributeToSelect('*'); // Select all attributes for description
 
             $productsPayload = [];
-            $store = $this->_storeManager->getStore();
-            $currencyCode = $store->getCurrentCurrencyCode();
-            
-            // Safety check
-            if (!$currencyCode) {
-                $currencyCode = $store->getBaseCurrencyCode();
-            }
 
             foreach ($collection as $product) {
-                $stockItem = $this->_stockRegistry->getStockItem($product->getId());
-                $qty = $stockItem ? (int)$stockItem->getQty() : 0;
-
-                $productsPayload[] = [
-                    'name' => $product->getName(),
-                    'price' => (float)$product->getPrice(),
-                    'currency' => $currencyCode,
-                    'availability' => $qty,
-                    'merchant_point_id' => $merchantPointId,
-                    'merchant_internal_id' => $product->getSku()
-                ];
+                // Load full product to get all attributes
+                try {
+                    $fullProduct = $this->_productRepository->getById($product->getId());
+                } catch (\Exception $e) {
+                    $fullProduct = $product;
+                }
+                
+                // Use helper to prepare payload with description, brand, category
+                $payload = $this->_ivoHelper->prepareProductPayload($fullProduct);
+                if ($payload) {
+                    $productsPayload[] = $payload;
+                }
 
                 if (count($productsPayload) >= 100) {
                     $this->_ivoHelper->syncProducts($productsPayload);

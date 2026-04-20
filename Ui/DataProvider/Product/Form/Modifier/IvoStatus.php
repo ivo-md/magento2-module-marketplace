@@ -143,6 +143,7 @@ class IvoStatus extends AbstractModifier
                 'pending_approval' => __('Product created but still pending approval.'),
                 'import_error' => __('An error occurred during import.'),
                 'skipped_no_match' => __('The product details are too generic to accurately identify the specific item being sold.'),
+                'too_generic' => __('The product details are too generic to generate a valid listing.'),
                 'unauthorized_category' => __('Merchant not authorized for product category.'),
                 'offer_deleted' => __('The offer was deleted from the marketplace.'),
                 'offer_not_found' => __('Product not found on marketplace.')
@@ -195,7 +196,8 @@ class IvoStatus extends AbstractModifier
                         success: function(res) {
                             if(res.status === 'success') {
                                 $('#ivo_sync_message').text(res.message).css('color', 'green');
-                                $('#ivo_sync_message').append(' <span style=\"color:#666;\">Refreshing status...</span>');
+                                // IVO processes sync asynchronously — wait before refreshing page
+                                $('#ivo_sync_message').append(' <span style=\"color:#666;\">" . __('Refreshing status...') . "</span>');
                                 setTimeout(function() { location.reload(); }, 5000);
                             } else {
                                 $('#ivo_sync_message').text(res.message).css('color', 'red');

@@ -5,23 +5,15 @@ namespace Ivo\Marketplace\Observer;
 use Magento\Framework\Event\ObserverInterface;
 use Magento\Framework\Event\Observer;
 use Ivo\Marketplace\Helper\Config;
-use Magento\CatalogInventory\Api\StockRegistryInterface;
-use Magento\Store\Model\StoreManagerInterface;
 
 class ProductSaveObserver implements ObserverInterface
 {
     protected $_ivoHelper;
-    protected $_stockRegistry;
-    protected $_storeManager;
 
     public function __construct(
-        Config $helper,
-        StockRegistryInterface $stockRegistry,
-        StoreManagerInterface $storeManager
+        Config $helper
     ) {
         $this->_ivoHelper = $helper;
-        $this->_stockRegistry = $stockRegistry;
-        $this->_storeManager = $storeManager;
     }
 
     public function execute(Observer $observer)
@@ -35,29 +27,11 @@ class ProductSaveObserver implements ObserverInterface
                 return;
             }
 
-            $merchantPointId = $this->_ivoHelper->getMerchantPointId();
-            if (!$merchantPointId) {
+            // Use helper to prepare payload with description, brand, category
+            $payload = $this->_ivoHelper->prepareProductPayload($product);
+            if (!$payload) {
                 return;
             }
-            
-            // Get stock quantity
-            $stockItem = $this->_stockRegistry->getStockItem($product->getId());
-            $qty = $stockItem ? (int)$stockItem->getQty() : 0;
-            
-            $store = $this->_storeManager->getStore();
-            $currencyCode = $store->getCurrentCurrencyCode();
-            if (!$currencyCode) {
-                 $currencyCode = $store->getBaseCurrencyCode();
-            }
-
-            $payload = [
-                'name' => $product->getName(),
-                'price' => (float)$product->getPrice(),
-                'currency' => $currencyCode,
-                'availability' => $qty,
-                'merchant_point_id' => $merchantPointId,
-                'merchant_internal_id' => $product->getSku()
-            ];
 
             // Perform Sync
             $this->_ivoHelper->syncProducts([$payload]);

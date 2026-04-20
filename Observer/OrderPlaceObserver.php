@@ -5,26 +5,18 @@ namespace Ivo\Marketplace\Observer;
 use Magento\Framework\Event\ObserverInterface;
 use Magento\Framework\Event\Observer;
 use Ivo\Marketplace\Helper\Config;
-use Magento\CatalogInventory\Api\StockRegistryInterface;
-use Magento\Store\Model\StoreManagerInterface;
 use Magento\Catalog\Api\ProductRepositoryInterface;
 
 class OrderPlaceObserver implements ObserverInterface
 {
     protected $_ivoHelper;
-    protected $_stockRegistry;
-    protected $_storeManager;
     protected $_productRepository;
 
     public function __construct(
         Config $helper,
-        StockRegistryInterface $stockRegistry,
-        StoreManagerInterface $storeManager,
         ProductRepositoryInterface $productRepository
     ) {
         $this->_ivoHelper = $helper;
-        $this->_stockRegistry = $stockRegistry;
-        $this->_storeManager = $storeManager;
         $this->_productRepository = $productRepository;
     }
 
@@ -36,17 +28,6 @@ class OrderPlaceObserver implements ObserverInterface
             
             if (!$this->_ivoHelper->getApiKey()) {
                 return;
-            }
-
-            $merchantPointId = $this->_ivoHelper->getMerchantPointId();
-            if (!$merchantPointId) {
-                return;
-            }
-
-            $store = $this->_storeManager->getStore($order->getStoreId());
-            $currencyCode = $store->getCurrentCurrencyCode();
-            if (!$currencyCode) {
-                $currencyCode = $store->getBaseCurrencyCode();
             }
 
             $processedSkus = [];
@@ -61,20 +42,14 @@ class OrderPlaceObserver implements ObserverInterface
                 $processedSkus[] = $sku;
 
                 try {
-                    // Load product by SKU to ensure we have the correct object for Stock Registry
+                    // Load product by SKU
                     $product = $this->_productRepository->get($sku);
                     
-                    $stockItem = $this->_stockRegistry->getStockItem($product->getId());
-                    $qty = $stockItem ? (int)$stockItem->getQty() : 0;
-                    
-                    $productsPayload[] = [
-                        'name' => $product->getName(),
-                        'price' => (float)$product->getPrice(),
-                        'currency' => $currencyCode,
-                        'availability' => $qty,
-                        'merchant_point_id' => $merchantPointId,
-                        'merchant_internal_id' => $sku
-                    ];
+                    // Use helper to prepare payload with description, brand, category
+                    $payload = $this->_ivoHelper->prepareProductPayload($product);
+                    if ($payload) {
+                        $productsPayload[] = $payload;
+                    }
                 } catch (\Exception $e) {
                     continue;
                 }

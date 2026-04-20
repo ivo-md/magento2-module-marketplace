@@ -18,7 +18,7 @@ class Config extends AbstractHelper
     const CONFIG_PATH_MERCHANT_POINT_ID = 'ivo_marketplace/general/merchant_point_id';
     
     // IVO Endpoints - Hardcoded, not user-configurable
-    const URL_SETUP = 'http://localhost:83/merchant/plugin/setup';
+    const URL_SETUP = 'https://www.ivo.md/merchant/plugin/setup';
     const API_BASE_URL = 'https://api-web:8443';
 
     protected $_storeManager;
@@ -83,7 +83,7 @@ class Config extends AbstractHelper
             'url_shop' => $baseUrl,
             'url_return' => $returnUrl,
             'platform' => 'magento',
-            'version' => '1.0.5',
+            'version' => '1.0.0',
             'ip_server' => $_SERVER['SERVER_ADDR'] ?? '127.0.0.1',
             'os_server' => php_uname('s')
         ];
@@ -111,6 +111,52 @@ class Config extends AbstractHelper
         // This handles cases where the key might be passed in a different format (e.g. Hex, Raw)
         $this->_logger->info('IVO Marketplace: Base64 decode failed or non-printable. Using raw input.');
         return $encryptedKey;
+    }
+
+    /**
+     * Check if API key is valid by calling /v1/merchant-api/check
+     * Returns merchant info array with 'error' key if failed, or merchant data if valid
+     */
+    public function checkApiKey($apiKey = null)
+    {
+        if (!$apiKey) {
+            $apiKey = $this->getApiKey();
+        }
+        if (!$apiKey) {
+            return ['error' => 'No API key configured'];
+        }
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, self::API_BASE_URL . "/v1/merchant-api/check");
+        $headers = [
+            "Authorization: Bearer " . $apiKey,
+            "Accept: application/json"
+        ];
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0); 
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+
+        if ($curlError) {
+            return ['error' => 'cURL error: ' . $curlError];
+        }
+
+        if ($httpCode !== 200) {
+            return ['error' => 'HTTP ' . $httpCode . ' - ' . substr($response, 0, 200)];
+        }
+
+        $data = json_decode($response, true);
+        if (isset($data['merchant_id'])) {
+            return $data;
+        }
+
+        return ['error' => 'Invalid API response: ' . substr($response, 0, 200)];
     }
 
     public function fetchMerchantPoints($apiKey = null)
@@ -153,6 +199,11 @@ class Config extends AbstractHelper
         return null;
     }
 
+    /**
+     * Prepare product payload for IVO API
+     * Includes: name, price, currency, availability, merchant_point_id, merchant_internal_id,
+     *           description (short_description + description + attributes), brand, category
+     */
     public function prepareProductPayload($product)
     {
         $merchantPointId = $this->getMerchantPointId();
@@ -173,16 +224,141 @@ class Config extends AbstractHelper
         if (!$currencyCode) {
              $currencyCode = $store->getBaseCurrencyCode();
         }
+        
+        // Build description: short_description + description + attributes
+        $descriptionParts = [];
+        
+        // Short description
+        $shortDesc = $product->getShortDescription();
+        if ($shortDesc) {
+            $descriptionParts[] = strip_tags($shortDesc);
+        }
+        
+        // Full description
+        $fullDesc = $product->getDescription();
+        if ($fullDesc) {
+            $descriptionParts[] = strip_tags($fullDesc);
+        }
+        
+        // Product attributes (custom attributes)
+        $attributes = $product->getAttributes();
+        foreach ($attributes as $attribute) {
+            // Skip system/internal attributes
+            $attrCode = $attribute->getAttributeCode();
+            if (in_array($attrCode, ['name', 'description', 'short_description', 'sku', 'price', 
+                'special_price', 'cost', 'weight', 'status', 'visibility', 'tax_class_id',
+                'url_key', 'url_path', 'image', 'small_image', 'thumbnail', 'swatch_image',
+                'meta_title', 'meta_keyword', 'meta_description', 'news_from_date', 'news_to_date',
+                'special_from_date', 'special_to_date', 'quantity_and_stock_status', 'category_ids',
+                'required_options', 'has_options', 'created_at', 'updated_at', 'gift_message_available',
+                'media_gallery', 'gallery', 'old_id', 'page_layout', 'options_container', 'custom_design',
+                'custom_design_from', 'custom_design_to', 'custom_layout_update', 'tier_price', 'msrp',
+                'msrp_display_actual_price_type', 'country_of_manufacture', 'links_purchased_separately',
+                'samples_title', 'links_title', 'links_exist', 'shipment_type'])) {
+                continue;
+            }
+            
+            // Only include visible attributes on frontend
+            if ($attribute->getIsVisibleOnFront()) {
+                $attrValue = $product->getAttributeText($attrCode);
+                if (!$attrValue) {
+                    $attrValue = $product->getData($attrCode);
+                }
+                if ($attrValue && !is_array($attrValue)) {
+                    $attrLabel = $attribute->getStoreLabel() ?: $attribute->getFrontendLabel();
+                    if ($attrLabel) {
+                        $descriptionParts[] = $attrLabel . ': ' . $attrValue;
+                    }
+                }
+            }
+        }
+        
+        $description = implode("\n\n", $descriptionParts);
+        
+        // Get brand (manufacturer attribute or custom brand attribute)
+        $brand = '';
+        if ($product->getManufacturer()) {
+            $brand = $product->getAttributeText('manufacturer');
+        }
+        if (!$brand && $product->getBrand()) {
+            $brand = $product->getAttributeText('brand');
+            if (!$brand) {
+                $brand = $product->getBrand();
+            }
+        }
+        
+        // Get category (with full path)
+        $category = '';
+        $categoryIds = $product->getCategoryIds();
+        if (!empty($categoryIds)) {
+            $objectManager = \Magento\Framework\App\ObjectManager::getInstance();
+            $categoryRepository = $objectManager->get(\Magento\Catalog\Api\CategoryRepositoryInterface::class);
+            
+            $categoryPaths = [];
+            foreach ($categoryIds as $categoryId) {
+                try {
+                    $categoryObj = $categoryRepository->get($categoryId);
+                    $path = $categoryObj->getPath();
+                    if ($path) {
+                        // Path is like "1/2/3/4" - get category names
+                        $pathIds = explode('/', $path);
+                        // Skip root (1) and default category (2)
+                        $pathIds = array_slice($pathIds, 2);
+                        
+                        $pathNames = [];
+                        foreach ($pathIds as $pathId) {
+                            try {
+                                $pathCategory = $categoryRepository->get($pathId);
+                                $pathNames[] = $pathCategory->getName();
+                            } catch (\Exception $e) {
+                                continue;
+                            }
+                        }
+                        if (!empty($pathNames)) {
+                            $categoryPaths[] = implode(' > ', $pathNames);
+                        }
+                    }
+                } catch (\Exception $e) {
+                    continue;
+                }
+            }
+            
+            // Use the deepest category path
+            if (!empty($categoryPaths)) {
+                usort($categoryPaths, function($a, $b) {
+                    return substr_count($b, '>') - substr_count($a, '>');
+                });
+                $category = $categoryPaths[0];
+            }
+        }
 
-        return [
+        $payload = [
             'name' => $product->getName(),
             'price' => (float)$product->getPrice(),
             'currency' => $currencyCode,
             'availability' => $qty,
             'merchant_point_id' => $merchantPointId,
-            'merchant_internal_id' => $product->getSku(),
-            'images' => $this->getProductImages($product),
+            'merchant_internal_id' => $product->getSku()
         ];
+        
+        // Add optional fields only if they have values
+        if ($description) {
+            $payload['description'] = $description;
+        }
+        if ($brand) {
+            $payload['brand'] = $brand;
+        }
+        if ($category) {
+            $payload['category'] = $category;
+        }
+        
+        // Get product images
+        $images = $this->getProductImages($product);
+        if (!empty($images)) {
+            $payload['images'] = $images;
+        }
+        
+        return $payload;
     }
 
     /**
@@ -250,54 +426,6 @@ class Config extends AbstractHelper
         curl_close($ch);
         
         return ['code' => $httpCode, 'response' => json_decode($response, true)];
-    }
-
-    /**
-     * Check if the API key is valid by calling /v1/merchant-api/check
-     * @param string|null $apiKey - if null, uses stored API key
-     * @return array - returns merchant info array with 'error' key if failed, or merchant data if valid
-     */
-    public function checkApiKey($apiKey = null)
-    {
-        if ($apiKey === null) {
-            $apiKey = $this->getApiKey();
-        }
-        if (!$apiKey) {
-            return ['error' => 'No API key configured'];
-        }
-
-        $url = self::API_BASE_URL . "/v1/merchant-api/check";
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        $headers = [
-            "Authorization: Bearer " . $apiKey,
-            "Accept: application/json",
-        ];
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlError = curl_error($ch);
-        curl_close($ch);
-
-        if ($curlError) {
-            return ['error' => 'cURL error: ' . $curlError];
-        }
-
-        if ($httpCode !== 200) {
-            return ['error' => 'HTTP ' . $httpCode . ' - ' . substr($response, 0, 200)];
-        }
-
-        $data = json_decode($response, true);
-        if (!$data || !isset($data['merchant_id'])) {
-            return ['error' => 'Invalid API response: ' . substr($response, 0, 200)];
-        }
-
-        return $data;
     }
 
     public function getProductIvoInfo($sku)

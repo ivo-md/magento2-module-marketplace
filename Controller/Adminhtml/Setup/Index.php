@@ -10,6 +10,11 @@ use Ivo\Marketplace\Helper\Config;
 class Index extends Action implements HttpGetActionInterface
 {
     /**
+     * Authorization level
+     */
+    const ADMIN_RESOURCE = 'Magento_Backend::admin';
+
+    /**
      * @var array
      */
     protected $_publicActions = ['index'];
@@ -20,6 +25,16 @@ class Index extends Action implements HttpGetActionInterface
     {
         $this->_ivoHelper = $helper;
         parent::__construct($context);
+    }
+
+    /**
+     * Check if admin is allowed to access this action
+     *
+     * @return bool
+     */
+    protected function _isAllowed()
+    {
+        return $this->_authorization->isAllowed(self::ADMIN_RESOURCE);
     }
 
     public function execute()
