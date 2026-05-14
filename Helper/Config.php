@@ -463,4 +463,36 @@ class Config extends AbstractHelper
     {
         return $this->_logger;
     }
+
+    /**
+     * Update local product stock (called by inbound IVO webhook when a sale happens on IVO).
+     *
+     * @param string $sku
+     * @param int    $qty
+     * @throws \Exception when the product cannot be found or stock cannot be saved
+     */
+    public function setProductStock($sku, $qty)
+    {
+        if ($sku === null || $sku === '') {
+            throw new \InvalidArgumentException('SKU is required');
+        }
+        $qty = (int)$qty;
+        if ($qty < 0) {
+            $qty = 0;
+        }
+
+        $objectManager = \Magento\Framework\App\ObjectManager::getInstance();
+        $productRepository = $objectManager->get(\Magento\Catalog\Api\ProductRepositoryInterface::class);
+
+        try {
+            $product = $productRepository->get($sku);
+        } catch (\Magento\Framework\Exception\NoSuchEntityException $e) {
+            throw new \Exception('Product not found: ' . $sku);
+        }
+
+        $stockItem = $this->_stockRegistry->getStockItem($product->getId());
+        $stockItem->setQty($qty);
+        $stockItem->setIsInStock($qty > 0);
+        $this->_stockRegistry->updateStockItemBySku($sku, $stockItem);
+    }
 }
