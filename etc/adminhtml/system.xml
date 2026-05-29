@@ -23,6 +23,11 @@
                     <label>Merchant Point</label>
                     <source_model>Ivo\Marketplace\Model\Config\Source\MerchantPoints</source_model>
                 </field>
+                <field id="price_modifier" translate="label" type="text" sortOrder="35" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Price Modifier (%)</label>
+                    <comment>Automatically adjust product prices sent to IVO (e.g., enter 10 to increase by 10%, or -5 to decrease by 5%). Enter 0 for no change.</comment>
+                    <backend_model>Ivo\Marketplace\Model\Config\Backend\PriceModifier</backend_model>
+                </field>
                  <field id="actions_render" translate="label" type="text" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1">
                     <label></label>
                     <frontend_model>Ivo\Marketplace\Block\Adminhtml\System\Config\Actions</frontend_model>

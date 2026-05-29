@@ -16,6 +16,7 @@ class Config extends AbstractHelper
     const CONFIG_PATH_API_KEY = 'ivo_marketplace/general/api_key';
     const CONFIG_PATH_CONFIGURED = 'ivo_marketplace/general/configured';
     const CONFIG_PATH_MERCHANT_POINT_ID = 'ivo_marketplace/general/merchant_point_id';
+    const CONFIG_PATH_PRICE_MODIFIER = 'ivo_marketplace/general/price_modifier';
     
     // IVO Endpoints - Hardcoded, not user-configurable
     const URL_SETUP = 'https://www.ivo.md/merchant/plugin/setup';
@@ -49,6 +50,21 @@ class Config extends AbstractHelper
     public function isConfigured()
     {
         return $this->scopeConfig->getValue(self::CONFIG_PATH_CONFIGURED);
+    }
+
+    public function getPriceModifier()
+    {
+        return (float) $this->scopeConfig->getValue(self::CONFIG_PATH_PRICE_MODIFIER);
+    }
+
+    public function applyPriceModifier($price)
+    {
+        $modifier = $this->getPriceModifier();
+        if ($modifier === 0.0) {
+            return $price;
+        }
+        $adjustedPrice = $price * (1 + ($modifier / 100));
+        return round(max(0.0, $adjustedPrice), 2);
     }
 
     public function getApiKey()
@@ -334,7 +350,7 @@ class Config extends AbstractHelper
 
         $payload = [
             'name' => $product->getName(),
-            'price' => (float)$product->getPrice(),
+            'price' => $this->applyPriceModifier((float)$product->getPrice()),
             'currency' => $currencyCode,
             'availability' => $qty,
             'merchant_point_id' => $merchantPointId,
