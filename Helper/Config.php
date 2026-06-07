@@ -20,7 +20,12 @@ class Config extends AbstractHelper
     
     // IVO Endpoints - Hardcoded, not user-configurable
     const URL_SETUP = 'https://www.ivo.md/merchant/plugin/setup';
-    const API_BASE_URL = 'https://api-web:8443';
+    const API_BASE_URL = 'https://a.ivo.md';
+
+    public function getApiBaseUrl()
+    {
+        return getenv('IVO_API_URL') ?: self::API_BASE_URL;
+    }
 
     protected $_storeManager;
     protected $_configWriter;
@@ -104,7 +109,8 @@ class Config extends AbstractHelper
             'os_server' => php_uname('s')
         ];
 
-        return self::URL_SETUP . '?' . http_build_query($params);
+        $setupUrl = getenv('IVO_SETUP_URL') ?: self::URL_SETUP;
+        return $setupUrl . '?' . http_build_query($params);
     }
 
     public function decryptIvoKey($encryptedKey)
@@ -143,7 +149,7 @@ class Config extends AbstractHelper
         }
 
         $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, self::API_BASE_URL . "/v1/merchant-api/check");
+        curl_setopt($ch, CURLOPT_URL, $this->getApiBaseUrl() . "/v1/merchant-api/check");
         $headers = [
             "Authorization: Bearer " . $apiKey,
             "Accept: application/json"
@@ -183,7 +189,7 @@ class Config extends AbstractHelper
         if (!$apiKey) return [];
 
         $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, self::API_BASE_URL . "/v1/merchant-api/merchant-points");
+        curl_setopt($ch, CURLOPT_URL, $this->getApiBaseUrl() . "/v1/merchant-api/merchant-points");
         $headers = [
             "Authorization: Bearer " . $apiKey,
             "Accept: application/json"
@@ -197,7 +203,34 @@ class Config extends AbstractHelper
         $this->_logger->info('IVO RAW RESPONSE: ' . $response);
         curl_close($ch);
 
-        return json_decode($response, true);
+        $data = json_decode($response, true);
+        if (is_array($data)) {
+            // Normalize points if present
+            if (isset($data['points']) && is_array($data['points'])) {
+                foreach ($data['points'] as &$point) {
+                    if (isset($point['_id']) && !isset($point['id'])) {
+                        $point['id'] = $point['_id'];
+                    }
+                }
+            }
+            // Normalize data if present
+            if (isset($data['data']) && is_array($data['data'])) {
+                foreach ($data['data'] as &$point) {
+                    if (isset($point['_id']) && !isset($point['id'])) {
+                        $point['id'] = $point['_id'];
+                    }
+                }
+            }
+            // Normalize flat array if it's a list
+            if (!isset($data['points']) && !isset($data['data']) && isset($data[0])) {
+                foreach ($data as &$point) {
+                    if (is_array($point) && isset($point['_id']) && !isset($point['id'])) {
+                        $point['id'] = $point['_id'];
+                    }
+                }
+            }
+        }
+        return $data;
     }
 
     public function getMerchantPointId()
@@ -208,9 +241,10 @@ class Config extends AbstractHelper
         }
 
         $points = $this->fetchMerchantPoints();
-        // Assuming structure { "data": [ { "id": "...", ... } ] }
-        if (isset($points['data']) && is_array($points['data']) && count($points['data']) > 0) {
-            return $points['data'][0]['id']; 
+        // Check both points and data
+        $pointsList = $points['points'] ?? $points['data'] ?? $points ?? [];
+        if (is_array($pointsList) && count($pointsList) > 0) {
+            return $pointsList[0]['id'] ?? $pointsList[0]['_id'] ?? null;
         }
         return null;
     }
@@ -424,7 +458,7 @@ class Config extends AbstractHelper
         ];
 
         $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, self::API_BASE_URL . "/v1/merchant-api/product/sync-multiple");
+        curl_setopt($ch, CURLOPT_URL, $this->getApiBaseUrl() . "/v1/merchant-api/product/sync-multiple");
         $headers = [
             "Authorization: Bearer " . $apiKey,
             "Accept: application/json",
@@ -449,7 +483,7 @@ class Config extends AbstractHelper
          $apiKey = $this->getApiKey();
         if (!$apiKey) return null;
 
-        $url = self::API_BASE_URL . "/v1/merchant-api/product/info-by-sku";
+        $url = $this->getApiBaseUrl() . "/v1/merchant-api/product/info-by-sku";
         $payload = [
             "import_name" => "api_sync_import_magento",
             "merchant_internal_id" => $sku
