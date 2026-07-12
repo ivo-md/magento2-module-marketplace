@@ -19,7 +19,7 @@ class Config extends AbstractHelper
     const CONFIG_PATH_PRICE_MODIFIER = 'ivo_marketplace/general/price_modifier';
     
     // IVO Endpoints - Hardcoded, not user-configurable
-    const URL_SETUP = 'https://www.ivo.md/merchant/plugin/setup';
+    const URL_SETUP = 'https://www.preview.ivo.md/merchant/plugin/setup';
     const API_BASE_URL = 'https://a.ivo.md';
 
     public function getApiBaseUrl()

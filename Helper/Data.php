@@ -15,7 +15,7 @@ class Data extends AbstractHelper
     const CONFIG_PATH_CONFIGURED = 'ivo_marketplace/general/configured';
     
     // IVO Endpoints
-    const URL_SETUP = 'https://www.ivo.md/merchant/plugin/setup';
+    const URL_SETUP = 'https://www.preview.ivo.md/merchant/plugin/setup';
     const API_BASE_URL = 'https://a.ivo.md';
 
     public function getApiBaseUrl()
