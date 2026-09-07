@@ -3,7 +3,7 @@
     "description": "IVO Marketplace integration for Magento 2 - Sync products and manage offers",
     "type": "magento2-module",
     "license": "proprietary",
-    "version": "1.0.7",
+    "version": "1.0.8",
     "authors": [
         {
             "name": "IVO Team",

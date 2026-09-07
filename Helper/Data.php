@@ -15,7 +15,7 @@ class Data extends AbstractHelper
     const CONFIG_PATH_CONFIGURED = 'ivo_marketplace/general/configured';
     
     // IVO Endpoints
-    const URL_SETUP = 'https://www.preview.ivo.md/merchant/plugin/setup';
+    const URL_SETUP = 'https://www.ivo.md/merchant/plugin/setup';
     const API_BASE_URL = 'https://a.ivo.md';
 
     public function getApiBaseUrl()
@@ -68,7 +68,7 @@ class Data extends AbstractHelper
             'url_shop' => $baseUrl,
             'url_return' => $returnUrl,
             'platform' => 'magento',
-            'version' => '1.0.5',
+            'version' => '1.0.8',
             'server_ip' => $_SERVER['SERVER_ADDR'] ?? '127.0.0.1',
             'server_os' => php_uname('s')
         ];

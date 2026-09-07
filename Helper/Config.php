@@ -19,7 +19,7 @@ class Config extends AbstractHelper
     const CONFIG_PATH_PRICE_MODIFIER = 'ivo_marketplace/general/price_modifier';
     
     // IVO Endpoints - Hardcoded, not user-configurable
-    const URL_SETUP = 'https://www.preview.ivo.md/merchant/plugin/setup';
+    const URL_SETUP = 'https://www.ivo.md/merchant/plugin/setup';
     const API_BASE_URL = 'https://a.ivo.md';
 
     public function getApiBaseUrl()
@@ -104,7 +104,7 @@ class Config extends AbstractHelper
             'url_shop' => $baseUrl,
             'url_return' => $returnUrl,
             'platform' => 'magento',
-            'version' => '1.0.0',
+            'version' => '1.0.8',
             'ip_server' => $_SERVER['SERVER_ADDR'] ?? '127.0.0.1',
             'os_server' => php_uname('s')
         ];
