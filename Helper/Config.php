@@ -407,8 +407,40 @@ class Config extends AbstractHelper
         if (!empty($images)) {
             $payload['images'] = $images;
         }
+
+        // Weight, only when set
+        $payload = array_merge($payload, $this->getProductMeasures($product));
         
         return $payload;
+    }
+
+    /**
+     * Product weight with its unit spelled out (IVO converts units itself).
+     * Magento has no native package dimensions, so only weight is sent;
+     * an empty or zero weight is left out.
+     */
+    public function getProductMeasures($product)
+    {
+        $weight = $product->getWeight();
+        if (!is_numeric($weight)) {
+            return [];
+        }
+        $weight = round((float)$weight, 4);
+        if ($weight <= 0) {
+            return [];
+        }
+
+        // general/locale/weight_unit is 'kgs' or 'lbs'
+        $units = ['kgs' => 'kg', 'kg' => 'kg', 'lbs' => 'lbs', 'lb' => 'lbs'];
+        $unit = strtolower((string)$this->scopeConfig->getValue(
+            'general/locale/weight_unit',
+            \Magento\Store\Model\ScopeInterface::SCOPE_STORE
+        ));
+        if (!isset($units[$unit])) {
+            return [];
+        }
+
+        return ['weight' => rtrim(rtrim(number_format($weight, 4, '.', ''), '0'), '.') . ' ' . $units[$unit]];
     }
 
     /**
