@@ -104,7 +104,7 @@ class Config extends AbstractHelper
             'url_shop' => $baseUrl,
             'url_return' => $returnUrl,
             'platform' => 'magento',
-            'version' => '1.0.8',
+            'version' => '1.0.9',
             'ip_server' => $_SERVER['SERVER_ADDR'] ?? '127.0.0.1',
             'os_server' => php_uname('s')
         ];
