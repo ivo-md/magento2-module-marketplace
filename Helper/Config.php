@@ -104,7 +104,7 @@ class Config extends AbstractHelper
             'url_shop' => $baseUrl,
             'url_return' => $returnUrl,
             'platform' => 'magento',
-            'version' => '1.0.9',
+            'version' => '1.0.10',
             'ip_server' => $_SERVER['SERVER_ADDR'] ?? '127.0.0.1',
             'os_server' => php_uname('s')
         ];
@@ -382,16 +382,22 @@ class Config extends AbstractHelper
             }
         }
 
+        // Selling price now, and the reference price above it when there is one
+        $prices = $this->getProductPrices($product);
+
         $payload = [
             'name' => $product->getName(),
-            'price' => $this->applyPriceModifier((float)$product->getPrice()),
+            'price' => $this->applyPriceModifier($prices['price']),
             'currency' => $currencyCode,
             'availability' => $qty,
             'merchant_point_id' => $merchantPointId,
             'merchant_internal_id' => $product->getSku()
         ];
-        
+
         // Add optional fields only if they have values
+        if (isset($prices['retail_price'])) {
+            $payload['retail_price'] = $prices['retail_price'];
+        }
         if ($description) {
             $payload['description'] = $description;
         }
@@ -412,6 +418,38 @@ class Config extends AbstractHelper
         $payload = array_merge($payload, $this->getProductMeasures($product));
         
         return $payload;
+    }
+
+    /**
+     * The price the shop sells at right now, plus the reference price IVO
+     * shows above it as the recommended retail price.
+     *
+     * Selling price: the special price while it is active in its date window,
+     * through the product type's own price model (a bundle special is a
+     * percentage). Catalog price rules stay out: Magento applies them per
+     * area and customer group, so an admin sync and a checkout-triggered one
+     * would push different prices.
+     *
+     * Reference price: the MSRP when set, otherwise the regular price while a
+     * special undercuts it; only when above the selling price, and never
+     * through the price modifier.
+     */
+    public function getProductPrices($product)
+    {
+        // Without a qty, getBasePrice() is the regular price with the special applied
+        $sellingPrice = (float)$product->getPriceModel()->getBasePrice($product);
+        $prices = ['price' => $sellingPrice];
+
+        $msrp = $product->getData('msrp');
+        $msrp = is_numeric($msrp) ? round((float)$msrp, 2) : 0.0;
+        $regularPrice = round((float)$product->getPrice(), 2);
+        if ($msrp > $sellingPrice) {
+            $prices['retail_price'] = $msrp;
+        } elseif ($regularPrice > $sellingPrice) {
+            $prices['retail_price'] = $regularPrice;
+        }
+
+        return $prices;
     }
 
     /**

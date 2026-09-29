@@ -77,6 +77,9 @@ If a product needs to be re-synced manually:
 
 ## Changelog
 
+### Version 1.0.10
+- Sends the price the shop sells at now (special price while active) and the MSRP, or the regular price a special undercuts, as the recommended retail price
+
 ### Version 1.0.0
 - Initial release
 - Automatic product sync on save
