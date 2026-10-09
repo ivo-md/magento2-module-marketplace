@@ -3,6 +3,9 @@
     <event name="catalog_product_save_after">
         <observer name="ivo_marketplace_product_save_after" instance="Ivo\Marketplace\Observer\ProductSaveObserver" />
     </event>
+    <event name="catalog_product_delete_before">
+        <observer name="ivo_marketplace_product_delete_before" instance="Ivo\Marketplace\Observer\ProductDeleteObserver" />
+    </event>
     <event name="sales_order_place_after">
         <observer name="ivo_marketplace_order_place_after" instance="Ivo\Marketplace\Observer\OrderPlaceObserver" />
     </event>

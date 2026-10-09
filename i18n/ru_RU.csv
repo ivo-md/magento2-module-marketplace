@@ -39,3 +39,37 @@
 "Unknown status","Неизвестный статус"
 "Refreshing status...","Обновление статуса..."
 "Product cannot be synced. Please ensure it has a valid price.","Продукт не может быть синхронизирован. Убедитесь, что у него есть действительная цена."
+Connect Account,Подключить аккаунт
+Link your IVO Merchant account.,Привяжите свой аккаунт продавца IVO.
+Product sync,Синхронизация продуктов
+Map categories, prices, stock, and images.,Синхронизация категорий, цен, запасов и изображений.
+Update stock,Обновление запасов
+Automatically sync stock between your store and IVO.,Автоматическая синхронизация запасов между вашим магазином и IVO.
+Connected,Подключен
+Configure connection,Настроить подключение
+Setup Progress,Прогресс настройки
+Settings,Настройки
+Force Sync,Принудительная синхронизация
+Active,Активен
+Inactive,Неактивен
+Ready,Готов
+Required,Требуется
+Next,Далее
+Update stock on sale,Обновлять запасы при продаже
+Automatically deduct local stock when an order is placed on IVO.,Автоматически вычитать локальные запасы при размещении заказа на IVO.
+"Synced %1 of %2 products...","Синхронизировано %1 из %2 товаров..."
+"Empty response from sync.","Пустой ответ от синхронизации."
+"Request failed: %1","Запрос не выполнен: %1"
+"The price modifier changed: re-sending all products to IVO.","Модификатор цены изменён: все товары повторно отправляются в IVO."
+"Products synchronization started successfully.","Синхронизация товаров успешно запущена."
+"IVO Marketplace is not configured.","IVO Marketplace не настроен."
+"No Merchant Point is selected. Choose one in the settings below and click Save Config.","Торговая точка не выбрана. Выберите её в настройках ниже и сохраните конфигурацию."
+"All products were sent, but IVO did not close the sync run, so products deleted from the shop stay on IVO until the next Force Sync. %1","Все товары отправлены, но IVO не завершил запуск синхронизации, поэтому удалённые из магазина товары останутся на IVO до следующей принудительной синхронизации. %1"
+"Could not reach IVO: %1","Не удалось связаться с IVO: %1"
+"%1 (currently saved)","%1 (сохранённое значение)"
+"Configurable and grouped products are not sent to IVO themselves: their simple products are. Sync those instead.","Настраиваемые и сгруппированные товары не отправляются в IVO сами по себе: отправляются входящие в них простые товары. Синхронизируйте их."
+"IVO Marketplace configured successfully. Merchant Point kept: %1","IVO Marketplace успешно настроен. Торговая точка оставлена: %1"
+"IVO Marketplace configured, but the Merchant Points could not be loaded. The saved Merchant Point %1 was kept.","IVO Marketplace настроен, но не удалось загрузить торговые точки. Сохранённая торговая точка %1 оставлена."
+"IVO Marketplace configured, but the Merchant Points could not be loaded. Reload this page to choose the Merchant Point.","IVO Marketplace настроен, но не удалось загрузить торговые точки. Перезагрузите страницу, чтобы выбрать торговую точку."
+"IVO Marketplace configured, but the saved Merchant Point %1 is not one of this account's points. Choose the Merchant Point below and click Save Config.","IVO Marketplace настроен, но сохранённая торговая точка %1 не принадлежит этому аккаунту. Выберите торговую точку ниже и сохраните конфигурацию."
+"IVO Marketplace configured. Choose the Merchant Point to sync products to below and click Save Config.","IVO Marketplace настроен. Выберите ниже торговую точку для синхронизации товаров и сохраните конфигурацию."

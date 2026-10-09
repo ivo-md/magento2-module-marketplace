@@ -39,3 +39,37 @@
 "Unknown status","Unknown status"
 "Refreshing status...","Refreshing status..."
 "Product cannot be synced. Please ensure it has a valid price.","Product cannot be synced. Please ensure it has a valid price."
+Connect Account,Connect Account
+Link your IVO Merchant account.,Link your IVO Merchant account.
+Product sync,Product sync
+Map categories, prices, stock, and images.,Map categories, prices, stock, and images.
+Update stock,Update stock
+Automatically sync stock between your store and IVO.,Automatically sync stock between your store and IVO.
+Connected,Connected
+Configure connection,Configure connection
+Setup Progress,Setup Progress
+Settings,Settings
+Force Sync,Force Sync
+Active,Active
+Inactive,Inactive
+Ready,Ready
+Required,Required
+Next,Next
+Update stock on sale,Update stock on sale
+Automatically deduct local stock when an order is placed on IVO.,Automatically deduct local stock when an order is placed on IVO.
+"Synced %1 of %2 products...","Synced %1 of %2 products..."
+"Empty response from sync.","Empty response from sync."
+"Request failed: %1","Request failed: %1"
+"The price modifier changed: re-sending all products to IVO.","The price modifier changed: re-sending all products to IVO."
+"Products synchronization started successfully.","Products synchronization started successfully."
+"IVO Marketplace is not configured.","IVO Marketplace is not configured."
+"No Merchant Point is selected. Choose one in the settings below and click Save Config.","No Merchant Point is selected. Choose one in the settings below and click Save Config."
+"All products were sent, but IVO did not close the sync run, so products deleted from the shop stay on IVO until the next Force Sync. %1","All products were sent, but IVO did not close the sync run, so products deleted from the shop stay on IVO until the next Force Sync. %1"
+"Could not reach IVO: %1","Could not reach IVO: %1"
+"%1 (currently saved)","%1 (currently saved)"
+"Configurable and grouped products are not sent to IVO themselves: their simple products are. Sync those instead.","Configurable and grouped products are not sent to IVO themselves: their simple products are. Sync those instead."
+"IVO Marketplace configured successfully. Merchant Point kept: %1","IVO Marketplace configured successfully. Merchant Point kept: %1"
+"IVO Marketplace configured, but the Merchant Points could not be loaded. The saved Merchant Point %1 was kept.","IVO Marketplace configured, but the Merchant Points could not be loaded. The saved Merchant Point %1 was kept."
+"IVO Marketplace configured, but the Merchant Points could not be loaded. Reload this page to choose the Merchant Point.","IVO Marketplace configured, but the Merchant Points could not be loaded. Reload this page to choose the Merchant Point."
+"IVO Marketplace configured, but the saved Merchant Point %1 is not one of this account's points. Choose the Merchant Point below and click Save Config.","IVO Marketplace configured, but the saved Merchant Point %1 is not one of this account's points. Choose the Merchant Point below and click Save Config."
+"IVO Marketplace configured. Choose the Merchant Point to sync products to below and click Save Config.","IVO Marketplace configured. Choose the Merchant Point to sync products to below and click Save Config."

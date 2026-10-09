@@ -4,11 +4,13 @@
  *
  * Inbound webhook controller — receives stock updates from IVO.
  *
- * Endpoint:  POST /ivo_marketplace_webhook/stock/update
+ * Endpoint:  POST /ivo_marketplace_webhook/webhook/stock
  * Auth:      Authorization: Bearer <api_key>      (matches stored API key)
  * Body:      { "products": [ { "merchant_internal_id": "SKU", "availability": 5 }, ... ] }
  *
- * Triggered when a sale occurs on IVO so the merchant's local stock stays in sync.
+ * Sets the stock to `availability`. IVO never called this path (it calls
+ * /stock/update, see Controller\Stock\Update, which applies a movement);
+ * it is kept for anything that still posts here.
  */
 
 namespace Ivo\Marketplace\Controller\Webhook;
@@ -65,6 +67,14 @@ class Stock extends Action implements HttpPostActionInterface, CsrfAwareActionIn
                 ->setData(['success' => false, 'error' => 'Unauthorized']);
         }
 
+        if (!$this->_ivoHelper->isUpdateStockEnabled()) {
+            $logger->info('IVO Marketplace Webhook: stock updates are disabled in configuration');
+            return $result->setData([
+                'success' => true,
+                'message' => 'Stock updates are disabled'
+            ]);
+        }
+
         // Parse JSON body
         $raw = $this->getRequest()->getContent();
         $data = json_decode($raw, true);
@@ -82,11 +92,8 @@ class Stock extends Action implements HttpPostActionInterface, CsrfAwareActionIn
                 $errors[] = ['merchant_internal_id' => $sku, 'error' => 'Missing merchant_internal_id or availability'];
                 continue;
             }
-            $qty = (int)$item['availability'];
-
             try {
-                $this->_ivoHelper->setProductStock($sku, $qty);
-                $updated[] = ['merchant_internal_id' => $sku, 'availability' => $qty];
+                $updated[] = $this->applyItem($sku, (int)$item['availability']);
             } catch (\Exception $e) {
                 $logger->error('IVO Marketplace Webhook: failed to update stock for ' . $sku . ' - ' . $e->getMessage());
                 $errors[] = ['merchant_internal_id' => $sku, 'error' => $e->getMessage()];
@@ -98,6 +105,15 @@ class Stock extends Action implements HttpPostActionInterface, CsrfAwareActionIn
             'updated' => $updated,
             'errors' => $errors,
         ]);
+    }
+
+    /**
+     * Apply one item to the local stock; returns the entry for `updated`.
+     */
+    protected function applyItem(string $sku, int $availability): array
+    {
+        $this->_ivoHelper->setProductStock($sku, $availability);
+        return ['merchant_internal_id' => $sku, 'availability' => $availability];
     }
 
     private function extractBearerToken(): ?string

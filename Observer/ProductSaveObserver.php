@@ -27,13 +27,27 @@ class ProductSaveObserver implements ObserverInterface
                 return;
             }
 
+            // A configurable, grouped or bundle product is not an offer; its simple products are
+            if (!$this->_ivoHelper->isSentAsOffer($product)) {
+                return;
+            }
+
             // Use helper to prepare payload with description, brand, category
+            // (null without a merchant point; the helper logs that)
             $payload = $this->_ivoHelper->prepareProductPayload($product);
             if (!$payload) {
                 return;
             }
 
-            // Perform Sync
+            if (!$this->_ivoHelper->isValidSyncPayload($payload)) {
+                $this->_ivoHelper->getLogger()->warning(
+                    'IVO Product Save Sync: skipped product ' . $product->getSku() . ' (id ' . (int)$product->getId() . '):'
+                    . ' a non-empty name and a price of at least 0.01 are required.'
+                );
+                return;
+            }
+
+            // Perform Sync (a rejected push is logged by the helper)
             $this->_ivoHelper->syncProducts([$payload]);
 
         } catch (\Exception $e) {

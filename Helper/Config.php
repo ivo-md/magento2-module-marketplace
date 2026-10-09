@@ -9,7 +9,9 @@ use Magento\Framework\App\Config\Storage\WriterInterface;
 use Magento\Framework\App\Cache\TypeListInterface;
 use Magento\Framework\App\ProductMetadataInterface;
 use Magento\Framework\Encryption\EncryptorInterface;
+use Magento\Framework\FlagManager;
 use Magento\CatalogInventory\Api\StockRegistryInterface;
+use Magento\Catalog\Model\Product\Attribute\Source\Status;
 
 class Config extends AbstractHelper
 {
@@ -17,7 +19,22 @@ class Config extends AbstractHelper
     const CONFIG_PATH_CONFIGURED = 'ivo_marketplace/general/configured';
     const CONFIG_PATH_MERCHANT_POINT_ID = 'ivo_marketplace/general/merchant_point_id';
     const CONFIG_PATH_PRICE_MODIFIER = 'ivo_marketplace/general/price_modifier';
-    
+    const CONFIG_PATH_UPDATE_STOCK = 'ivo_marketplace/general/update_stock';
+
+    // Set when the whole catalogue must be re-sent (new price modifier); holds the request time
+    const FLAG_RESYNC_REQUESTED_AT = 'ivo_marketplace_resync_requested_at';
+
+    // Containers: their simple products are what is sold and what IVO gets.
+    // Bundles stay: a fixed-price bundle is an offer, a dynamic-price one
+    // carries price 0 and is left out by isValidSyncPayload.
+    const PARENT_PRODUCT_TYPES = ['configurable', 'grouped'];
+
+    // Stock that is not managed is not limited (the WooCommerce plugin sends the same)
+    const UNMANAGED_STOCK_AVAILABILITY = 9999;
+
+    // IVO takes at most this many products in one sync-multiple call
+    const SYNC_BATCH_LIMIT = 100;
+
     // IVO Endpoints - Hardcoded, not user-configurable
     const URL_SETUP = 'https://www.ivo.md/merchant/plugin/setup';
     const API_BASE_URL = 'https://a.ivo.md';
@@ -33,6 +50,10 @@ class Config extends AbstractHelper
     protected $_productMetadata;
     protected $_encryptor;
     protected $_stockRegistry;
+    protected $_flagManager;
+
+    // The point picked when none is stored, resolved once per request (false = not yet)
+    private $_fallbackMerchantPointId = false;
 
     public function __construct(
         Context $context,
@@ -41,7 +62,8 @@ class Config extends AbstractHelper
         TypeListInterface $cacheTypeList,
         ProductMetadataInterface $productMetadata,
         EncryptorInterface $encryptor,
-        StockRegistryInterface $stockRegistry
+        StockRegistryInterface $stockRegistry,
+        FlagManager $flagManager
     ) {
         $this->_storeManager = $storeManager;
         $this->_configWriter = $configWriter;
@@ -49,6 +71,7 @@ class Config extends AbstractHelper
         $this->_productMetadata = $productMetadata;
         $this->_encryptor = $encryptor;
         $this->_stockRegistry = $stockRegistry;
+        $this->_flagManager = $flagManager;
         parent::__construct($context);
     }
 
@@ -60,6 +83,38 @@ class Config extends AbstractHelper
     public function getPriceModifier()
     {
         return (float) $this->scopeConfig->getValue(self::CONFIG_PATH_PRICE_MODIFIER);
+    }
+
+    public function isUpdateStockEnabled()
+    {
+        return (bool) $this->scopeConfig->getValue(self::CONFIG_PATH_UPDATE_STOCK);
+    }
+
+    /**
+     * Ask for the whole catalogue to be re-sent. The config page sees the flag
+     * and runs the sliced Force Sync; nothing catalogue-wide runs in the
+     * request that raised it.
+     */
+    public function requestResync()
+    {
+        $this->_flagManager->saveFlag(self::FLAG_RESYNC_REQUESTED_AT, time());
+    }
+
+    public function isResyncRequested()
+    {
+        return (bool)$this->_flagManager->getFlagData(self::FLAG_RESYNC_REQUESTED_AT);
+    }
+
+    /**
+     * A full run finished: the re-send it stood for is done, unless the run
+     * began before the request (its early slices went out with old prices).
+     */
+    public function clearResyncRequest($runStartedAt)
+    {
+        $requestedAt = (int)$this->_flagManager->getFlagData(self::FLAG_RESYNC_REQUESTED_AT);
+        if ($requestedAt && (int)$runStartedAt >= $requestedAt) {
+            $this->_flagManager->deleteFlag(self::FLAG_RESYNC_REQUESTED_AT);
+        }
     }
 
     public function applyPriceModifier($price)
@@ -104,7 +159,7 @@ class Config extends AbstractHelper
             'url_shop' => $baseUrl,
             'url_return' => $returnUrl,
             'platform' => 'magento',
-            'version' => '1.0.10',
+            'version' => $this->_productMetadata->getVersion(),
             'ip_server' => $_SERVER['SERVER_ADDR'] ?? '127.0.0.1',
             'os_server' => php_uname('s')
         ];
@@ -233,20 +288,69 @@ class Config extends AbstractHelper
         return $data;
     }
 
+    /**
+     * The merchant's points as a list of arrays with an 'id', or null when IVO
+     * could not be asked or did not answer with a point list (an error, a
+     * timeout). An empty list is a real answer: the account has no points.
+     */
+    public function getMerchantPointList($apiKey = null)
+    {
+        $response = $this->fetchMerchantPoints($apiKey);
+        if (!is_array($response)) {
+            return null;
+        }
+
+        if (isset($response['points']) && is_array($response['points'])) {
+            $list = $response['points'];
+        } elseif (isset($response['data']) && is_array($response['data'])) {
+            $list = $response['data'];
+        } elseif ($response === [] || isset($response[0])) {
+            $list = $response;
+        } else {
+            return null;
+        }
+
+        $points = [];
+        foreach ($list as $point) {
+            if (is_array($point) && isset($point['id']) && is_scalar($point['id']) && (string)$point['id'] !== '') {
+                $points[] = $point;
+            }
+        }
+        return $points;
+    }
+
+    public function getStoredMerchantPointId()
+    {
+        return trim((string)$this->scopeConfig->getValue(self::CONFIG_PATH_MERCHANT_POINT_ID));
+    }
+
+    /**
+     * The point pushes go to: the stored one, or the account's only point.
+     * With several points and none chosen, guessing the first one put stock
+     * on a point the merchant never picked, so nothing is sent until one is.
+     */
     public function getMerchantPointId()
     {
-        $configId = $this->scopeConfig->getValue('ivo_marketplace/general/merchant_point_id');
-        if ($configId) {
+        $configId = $this->getStoredMerchantPointId();
+        if ($configId !== '') {
             return $configId;
         }
 
-        $points = $this->fetchMerchantPoints();
-        // Check both points and data
-        $pointsList = $points['points'] ?? $points['data'] ?? $points ?? [];
-        if (is_array($pointsList) && count($pointsList) > 0) {
-            return $pointsList[0]['id'] ?? $pointsList[0]['_id'] ?? null;
+        // Once per request: a full-sync slice asks for every product
+        if ($this->_fallbackMerchantPointId === false) {
+            $points = $this->getMerchantPointList();
+            if (is_array($points) && count($points) === 1) {
+                $this->_fallbackMerchantPointId = (string)$points[0]['id'];
+            } else {
+                $this->_fallbackMerchantPointId = null;
+                $this->_logger->warning(
+                    'IVO Marketplace: no Merchant Point selected'
+                    . (is_array($points) ? ' (the account has ' . count($points) . ' points)' : ' (the point list could not be fetched)')
+                    . '; nothing is pushed to IVO until one is chosen in Stores > Configuration > IVO Marketplace.'
+                );
+            }
         }
-        return null;
+        return $this->_fallbackMerchantPointId;
     }
 
     /**
@@ -260,15 +364,9 @@ class Config extends AbstractHelper
         if (!$merchantPointId) {
             return null;
         }
-        
-        // Get stock quantity
-        try {
-            $stockItem = $this->_stockRegistry->getStockItem($product->getId());
-            $qty = $stockItem ? (int)$stockItem->getQty() : 0;
-        } catch (\Exception $e) {
-            $qty = 0;
-        }
-        
+
+        $qty = $this->getAvailability($product);
+
         $store = $this->_storeManager->getStore();
         $currencyCode = $store->getCurrentCurrencyCode();
         if (!$currencyCode) {
@@ -421,6 +519,100 @@ class Config extends AbstractHelper
     }
 
     /**
+     * Configurable and grouped products are containers: the simple products
+     * under them are what is sold, and those are the offers. Sent themselves
+     * they carry price 0, and one such item makes IVO reject its batch.
+     */
+    public function isSentAsOffer($product)
+    {
+        return !in_array((string)$product->getTypeId(), self::PARENT_PRODUCT_TYPES, true);
+    }
+
+    /**
+     * IVO rejects a whole sync-multiple call for one item without a name or
+     * with a price under 0.01, so such items are left out (and logged by the
+     * caller) instead of taking their neighbours down with them.
+     */
+    public function isValidSyncPayload($payload)
+    {
+        return is_array($payload)
+            && isset($payload['name'])
+            && is_string($payload['name'])
+            && trim($payload['name']) !== ''
+            && isset($payload['price'])
+            && is_numeric($payload['price'])
+            && (float)$payload['price'] >= 0.01;
+    }
+
+    /**
+     * Units IVO may sell: the shop's real stock, never more.
+     *
+     * A disabled product, or a variant whose configurable product is
+     * disabled, is not for sale. Out of stock is 0 whatever the qty says, and
+     * backorders (negative qty) are 0. Stock that is not managed but in stock
+     * is UNMANAGED_STOCK_AVAILABILITY. This reads the legacy stock item: MSI
+     * salable quantity (reservations of unshipped orders) is not consulted.
+     */
+    public function getAvailability($product)
+    {
+        if ((int)$product->getStatus() === Status::STATUS_DISABLED) {
+            return 0;
+        }
+        if ($this->hasDisabledConfigurableParent($product)) {
+            return 0;
+        }
+
+        try {
+            $stockItem = $this->_stockRegistry->getStockItem($product->getId());
+        } catch (\Exception $e) {
+            return 0;
+        }
+        if (!$stockItem || !$stockItem->getIsInStock()) {
+            return 0;
+        }
+        if (!$stockItem->getManageStock()) {
+            return self::UNMANAGED_STOCK_AVAILABILITY;
+        }
+
+        return max(0, (int)$stockItem->getQty());
+    }
+
+    /**
+     * Whether a configurable product this one is a variant of is disabled:
+     * the shop then sells none of its variants, whatever their own stock.
+     * Resolved lazily so the module keeps working without ConfigurableProduct.
+     */
+    private function hasDisabledConfigurableParent($product)
+    {
+        $productId = (int)$product->getId();
+        $linkResource = \Magento\ConfigurableProduct\Model\ResourceModel\Product\Type\Configurable::class;
+        if (!$productId || !class_exists($linkResource)) {
+            return false;
+        }
+
+        try {
+            $objectManager = \Magento\Framework\App\ObjectManager::getInstance();
+            $parentIds = $objectManager->get($linkResource)->getParentIdsByChild($productId);
+            if (empty($parentIds)) {
+                return false;
+            }
+
+            $productResource = $objectManager->get(\Magento\Catalog\Model\ResourceModel\Product::class);
+            $storeId = (int)$product->getStoreId();
+            foreach ($parentIds as $parentId) {
+                $status = $productResource->getAttributeRawValue($parentId, 'status', $storeId);
+                if (is_scalar($status) && (int)$status === Status::STATUS_DISABLED) {
+                    return true;
+                }
+            }
+        } catch (\Exception $e) {
+            $this->_logger->warning('IVO Marketplace: could not read the configurable parents of product ' . $productId . ': ' . $e->getMessage());
+        }
+
+        return false;
+    }
+
+    /**
      * The price the shop sells at right now, plus the reference price IVO
      * shows above it as the recommended retail price.
      *
@@ -516,7 +708,7 @@ class Config extends AbstractHelper
         return $images;
     }
 
-    public function syncProducts($productsData, $mode = 'async')
+    public function syncProducts($productsData, $mode = 'async', $integrationRunId = null)
     {
          $apiKey = $this->getApiKey();
         if (!$apiKey) return false;
@@ -526,9 +718,42 @@ class Config extends AbstractHelper
             "import_name" => "api_sync_import_magento",
             "products" => $productsData
         ];
+        if ($integrationRunId) {
+            $payload["integration_run_id"] = $integrationRunId;
+        }
 
+        $what = 'sync of ' . count($productsData) . ' product(s)' . ($integrationRunId ? ' in run ' . $integrationRunId : '');
+        return $this->postToIvo('/v1/merchant-api/product/sync-multiple', $payload, $apiKey, $what);
+    }
+
+    /**
+     * Close a full-sync run: products IVO knows from this store that were NOT
+     * part of the run no longer exist here, so their offers go out of stock.
+     */
+    public function completeSyncRun($integrationRunId)
+    {
+        $apiKey = $this->getApiKey();
+        if (!$apiKey || !$integrationRunId) return false;
+
+        $payload = [
+            "import_name" => "api_sync_import_magento",
+            "integration_run_id" => $integrationRunId
+        ];
+
+        return $this->postToIvo('/v1/merchant-api/product/complete-run', $payload, $apiKey, 'completion of run ' . $integrationRunId);
+    }
+
+    /**
+     * POST a JSON body to the IVO API. A failure is logged here, so no push
+     * that IVO never got or refused goes unnoticed; the caller decides what
+     * the admin sees.
+     *
+     * @return array ['code' => int, 'response' => mixed, 'error' => string cURL error]
+     */
+    private function postToIvo($path, array $payload, $apiKey, $what)
+    {
         $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $this->getApiBaseUrl() . "/v1/merchant-api/product/sync-multiple");
+        curl_setopt($ch, CURLOPT_URL, $this->getApiBaseUrl() . $path);
         $headers = [
             "Authorization: Bearer " . $apiKey,
             "Accept: application/json",
@@ -538,14 +763,95 @@ class Config extends AbstractHelper
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0); 
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+        // An unreachable IVO must not hold a save, a checkout or a sync slice open
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 60);
 
         $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = (string)curl_error($ch);
         curl_close($ch);
-        
-        return ['code' => $httpCode, 'response' => json_decode($response, true)];
+
+        $body = is_string($response) ? $response : '';
+        if ($curlError !== '') {
+            $this->_logger->error('IVO Marketplace: ' . $what . ' failed: cURL error: ' . $curlError);
+        } elseif ($httpCode < 200 || $httpCode >= 300) {
+            $this->_logger->error('IVO Marketplace: ' . $what . ' rejected: HTTP ' . $httpCode . ' ' . substr($body, 0, 1000));
+        }
+
+        return ['code' => $httpCode, 'response' => json_decode($body, true), 'error' => $curlError];
+    }
+
+    public function isSyncSuccess($result)
+    {
+        $code = is_array($result) ? (int)($result['code'] ?? 0) : 0;
+        return $code >= 200 && $code < 300;
+    }
+
+    /**
+     * Whether sending the same call again may succeed: IVO was unreachable or
+     * failed on its side. A 4xx is an answer about the data and stays one.
+     */
+    public function isRetryableSyncFailure($result)
+    {
+        if (!is_array($result)) {
+            return false;
+        }
+        $code = (int)($result['code'] ?? 0);
+        return ($result['error'] ?? '') !== '' || $code === 0 || $code === 429 || $code >= 500;
+    }
+
+    /**
+     * What the admin is told about a failed call: the HTTP code, IVO's message
+     * and, for a validation error, which product of the batch it was about.
+     */
+    public function getSyncErrorMessage($result, array $productsPayload = [])
+    {
+        if (!is_array($result)) {
+            return (string)__('IVO Marketplace is not configured.');
+        }
+        if (($result['error'] ?? '') !== '') {
+            return (string)__('Could not reach IVO: %1', $result['error']);
+        }
+
+        $message = (string)__('Sync failed. API Code: %1', (int)($result['code'] ?? 0));
+        $response = $result['response'] ?? null;
+        if (!is_array($response)) {
+            return $message;
+        }
+
+        $apiMessage = $response['message'] ?? $response['error'] ?? '';
+        if (is_string($apiMessage) && $apiMessage !== '') {
+            $message .= ' ' . $apiMessage;
+        }
+
+        $parts = [];
+        if (isset($response['index']) && is_numeric($response['index'])) {
+            $index = (int)$response['index'];
+            $label = 'batch item #' . ($index + 1);
+            $item = $productsPayload[$index] ?? null;
+            if (is_array($item) && trim((string)($item['merchant_internal_id'] ?? '')) !== '') {
+                $label = 'product ' . trim((string)$item['merchant_internal_id']);
+            }
+            $parts[] = $label;
+        }
+        if (isset($response['errors']) && is_array($response['errors'])) {
+            foreach ($response['errors'] as $field => $messages) {
+                $messages = array_values(array_filter(array_map(function ($m) {
+                    return is_scalar($m) ? (string)$m : '';
+                }, (array)$messages)));
+                if (!empty($messages)) {
+                    $parts[] = $field . ': ' . implode(', ', $messages);
+                }
+            }
+        }
+        if (!empty($parts)) {
+            $message .= ' - ' . implode('; ', $parts);
+        }
+
+        return $message;
     }
 
     public function getProductIvoInfo($sku)
@@ -591,6 +897,39 @@ class Config extends AbstractHelper
      * @param int    $qty
      * @throws \Exception when the product cannot be found or stock cannot be saved
      */
+    /**
+     * Move a product's stock by $delta (a sale on IVO is negative, a cancelled
+     * IVO order positive) and return the new quantity, or null when the
+     * product's stock is not managed and there is nothing to move.
+     */
+    public function adjustProductStock($sku, $delta)
+    {
+        if ($sku === null || $sku === '') {
+            throw new \InvalidArgumentException('SKU is required');
+        }
+
+        $objectManager = \Magento\Framework\App\ObjectManager::getInstance();
+        $productRepository = $objectManager->get(\Magento\Catalog\Api\ProductRepositoryInterface::class);
+
+        try {
+            $product = $productRepository->get($sku);
+        } catch (\Magento\Framework\Exception\NoSuchEntityException $e) {
+            throw new \Exception('Product not found: ' . $sku);
+        }
+
+        $stockItem = $this->_stockRegistry->getStockItem($product->getId());
+        if (!$stockItem->getManageStock()) {
+            return null;
+        }
+
+        $qty = max(0, (int)$stockItem->getQty() + (int)$delta);
+        $stockItem->setQty($qty);
+        $stockItem->setIsInStock($qty > 0);
+        $this->_stockRegistry->updateStockItemBySku($sku, $stockItem);
+
+        return $qty;
+    }
+
     public function setProductStock($sku, $qty)
     {
         if ($sku === null || $sku === '') {

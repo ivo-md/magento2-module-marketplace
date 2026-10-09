@@ -37,21 +37,26 @@ class Sync extends Action
 
         try {
             $product = $this->productRepository->get($sku);
+
+            if (!$this->helper->isSentAsOffer($product)) {
+                return $result->setData(['status' => 'error', 'message' => (string)__('Configurable and grouped products are not sent to IVO themselves: their simple products are. Sync those instead.')]);
+            }
+
             $payload = $this->helper->prepareProductPayload($product);
             
             if (!$payload) {
                 return $result->setData(['status' => 'error', 'message' => 'Could not prepare payload or Merchant Point ID missing']);
             }
 
-            if ((float)$product->getPrice() < 0.01) {
+            // What IVO checks is the price sent (special price, modifier), not the catalog price
+            if (!$this->helper->isValidSyncPayload($payload)) {
                 return $result->setData(['status' => 'error', 'message' => 'Product cannot be synced. Please ensure it has a valid price.']);
             }
 
             // Sync
             $syncResult = $this->helper->syncProducts([$payload]);
             
-            // Check success logic (assuming 2xx is success)
-            if ($syncResult['code'] >= 200 && $syncResult['code'] < 300) {
+            if ($this->helper->isSyncSuccess($syncResult)) {
                  return $result->setData([
                      'status' => 'success', 
                      'message' => 'Product synced successfully!',
@@ -60,8 +65,8 @@ class Sync extends Action
             } else {
                  return $result->setData([
                      'status' => 'error', 
-                     'message' => 'Sync failed. API Code: ' . $syncResult['code'],
-                     'details' => $syncResult['response']
+                     'message' => $this->helper->getSyncErrorMessage($syncResult, [$payload]),
+                     'details' => is_array($syncResult) ? $syncResult['response'] : null
                  ]);
             }
 

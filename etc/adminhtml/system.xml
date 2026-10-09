@@ -11,6 +11,10 @@
             <resource>Ivo_Marketplace::config</resource>
             <group id="general" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
                 <label>Settings</label>
+                <field id="actions_render" translate="label" type="text" sortOrder="5" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label></label>
+                    <frontend_model>Ivo\Marketplace\Block\Adminhtml\System\Config\Actions</frontend_model>
+                </field>
                 <field id="api_key" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>API Key</label>
                     <frontend_model>Ivo\Marketplace\Block\Adminhtml\System\Config\ApiKey</frontend_model>
@@ -28,9 +32,10 @@
                     <comment>Automatically adjust product prices sent to IVO (e.g., enter 10 to increase by 10%, or -5 to decrease by 5%). Enter 0 for no change.</comment>
                     <backend_model>Ivo\Marketplace\Model\Config\Backend\PriceModifier</backend_model>
                 </field>
-                 <field id="actions_render" translate="label" type="text" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1">
-                    <label></label>
-                    <frontend_model>Ivo\Marketplace\Block\Adminhtml\System\Config\Actions</frontend_model>
+                <field id="update_stock" translate="label" type="select" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Update stock on sale</label>
+                    <comment>Automatically deduct local stock when an order is placed on IVO.</comment>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
                 </field>
             </group>
         </section>

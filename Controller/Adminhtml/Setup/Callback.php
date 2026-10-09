@@ -38,23 +38,37 @@ class Callback extends Action implements HttpGetActionInterface
             try {
                 $apiKey = $this->_ivoHelper->decryptIvoKey($key);
                 if ($apiKey) {
+                    // A reconnect must not move pushes to another point than the one chosen
+                    $storedPointId = $this->_ivoHelper->getStoredMerchantPointId();
                     $this->_ivoHelper->saveApiKey($apiKey);
                     
                     try {
                         // Pass the API key directly to avoid cache latency issues
-                        $points = $this->_ivoHelper->fetchMerchantPoints($apiKey);
-                        
-                        // Check if response contains 'points' (API format) or 'data' (Generic format)
-                        $pointsList = $points['points'] ?? $points['data'] ?? [];
+                        $pointsList = $this->_ivoHelper->getMerchantPointList($apiKey);
+                        $pointNames = [];
+                        foreach ((array)$pointsList as $point) {
+                            $pointNames[(string)$point['id']] = $point['name'] ?? $point['id'];
+                        }
 
-                        if (is_array($pointsList) && count($pointsList) > 0) {
-                            $firstPointId = $pointsList[0]['id'];
-                            $pointName = $pointsList[0]['name'] ?? $firstPointId;
-                            $this->_ivoHelper->setMerchantPointId($firstPointId);
-                            $this->messageManager->addSuccessMessage(__('IVO Marketplace configured successfully. Merchant Point set to: %1', $pointName));
+                        if ($pointsList === null) {
+                            if ($storedPointId !== '') {
+                                $this->messageManager->addWarningMessage(__('IVO Marketplace configured, but the Merchant Points could not be loaded. The saved Merchant Point %1 was kept.', $storedPointId));
+                            } else {
+                                $this->messageManager->addWarningMessage(__('IVO Marketplace configured, but the Merchant Points could not be loaded. Reload this page to choose the Merchant Point.'));
+                            }
+                        } elseif ($storedPointId !== '' && isset($pointNames[$storedPointId])) {
+                            $this->messageManager->addSuccessMessage(__('IVO Marketplace configured successfully. Merchant Point kept: %1', $pointNames[$storedPointId]));
+                        } elseif ($storedPointId !== '') {
+                            // Another account, or the point is gone: the merchant decides where stock goes
+                            $this->messageManager->addWarningMessage(__('IVO Marketplace configured, but the saved Merchant Point %1 is not one of this account\'s points. Choose the Merchant Point below and click Save Config.', $storedPointId));
+                        } elseif (count($pointsList) === 1) {
+                            $pointId = (string)$pointsList[0]['id'];
+                            $this->_ivoHelper->setMerchantPointId($pointId);
+                            $this->messageManager->addSuccessMessage(__('IVO Marketplace configured successfully. Merchant Point set to: %1', $pointNames[$pointId]));
+                        } elseif (count($pointsList) > 1) {
+                            $this->messageManager->addWarningMessage(__('IVO Marketplace configured. Choose the Merchant Point to sync products to below and click Save Config.'));
                         } else {
-                            $debugMsg = isset($points['message']) ? $points['message'] : 'No data';
-                            $this->messageManager->addWarningMessage(__('IVO Marketplace configured, but no Merchant Points found. Debug: %1', $debugMsg));
+                            $this->messageManager->addWarningMessage(__('IVO Marketplace configured, but no Merchant Points found. Debug: %1', 'No data'));
                         }
                     } catch (\Exception $e) {
                          $this->messageManager->addWarningMessage(__('IVO Marketplace configured, but failed to auto-select Merchant Point: %1', $e->getMessage()));

@@ -18,24 +18,30 @@ class MerchantPoints implements OptionSourceInterface
     {
         $options = [];
         try {
-            $pointsResponse = $this->_ivoHelper->fetchMerchantPoints();
-            
-            // Normalize: API returns 'points', generic wrapper might return 'data'
-            $points = $pointsResponse['points'] ?? $pointsResponse['data'] ?? [];
-            
-            if (is_array($points) && count($points) > 0) {
+            $points = $this->_ivoHelper->getMerchantPointList();
+
+            if (is_array($points)) {
                 foreach ($points as $point) {
                     $label = $point['name'] ?? $point['id'];
                     $options[] = [
-                        'value' => $point['id'],
+                        'value' => (string)$point['id'],
                         'label' => $label
                     ];
                 }
             }
         } catch (\Exception $e) {
-            // Log error or ignore
+            $this->_ivoHelper->getLogger()->warning('IVO Marketplace: could not list Merchant Points: ' . $e->getMessage());
         }
-        
+
+        // The select offers only what IVO just listed. When that fetch fails,
+        // or no longer lists the saved point, Save Config would store another
+        // value (or '') and every push would stop or move; the saved point
+        // stays selectable until the merchant picks another.
+        $storedId = $this->_ivoHelper->getStoredMerchantPointId();
+        if ($storedId !== '' && !in_array($storedId, array_column($options, 'value'), true)) {
+            array_unshift($options, ['value' => $storedId, 'label' => __('%1 (currently saved)', $storedId)]);
+        }
+
         if (empty($options)) {
             $options[] = ['value' => '', 'label' => __('No Merchant Points Found / API Key Missing')];
         }

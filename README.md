@@ -77,7 +77,17 @@ If a product needs to be re-synced manually:
 
 ## Changelog
 
-### Version 1.0.10
+### Version 1.0.12
+- Force Sync runs as a series of small requests with progress, so a shop's request timeout no longer cuts it off; a new price modifier re-sends the catalogue the same way (it used to re-send inside the config save, with the old modifier)
+- Configurable and grouped parents are no longer sent at price 0 (one made IVO reject its whole batch); their simple products are the offers
+- Stock: out of stock, disabled and backorders go out as 0, unmanaged stock as available, and a disabled configurable zeroes its children
+- Orders push the simple product actually sold, as a stock update; order pushes no longer depend on the "Update stock on sale" setting
+- Saving the config can no longer blank the merchant point, and reconnecting keeps the chosen one
+- Items without a name or price are skipped instead of failing their batch, calls carry at most 100 items and have timeouts, and rejected pushes are logged
+- New stock webhook (/ivo_marketplace_webhook/stock/update) that applies IVO's sales as movements
+- Run `bin/magento setup:upgrade` (and `setup:di:compile` in production mode) after updating
+
+### Version 1.0.11
 - Sends the price the shop sells at now (special price while active) and the MSRP, or the regular price a special undercuts, as the recommended retail price
 
 ### Version 1.0.0

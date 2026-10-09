@@ -4,6 +4,8 @@
         <ivo_marketplace>
             <general>
                 <configured>0</configured>
+                <update_stock>1</update_stock>
+                <price_modifier>0</price_modifier>
             </general>
         </ivo_marketplace>
     </default>

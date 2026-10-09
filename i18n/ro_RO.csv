@@ -39,3 +39,37 @@
 "Unknown status","Stare necunoscută"
 "Refreshing status...","Se actualizează starea..."
 "Product cannot be synced. Please ensure it has a valid price.","Produsul nu poate fi sincronizat. Asigurați-vă că are un preț valid."
+Connect Account,Conectare Cont
+Link your IVO Merchant account.,Asociază contul tău de comerciant IVO.
+Product sync,Sincronizare produse
+Map categories, prices, stock, and images.,Sincronizează categoriile, prețurile, stocul și imaginile.
+Update stock,Actualizare stoc
+Automatically sync stock between your store and IVO.,Sincronizează automat stocul între magazinul tău și IVO.
+Connected,Conectat
+Configure connection,Configurează conexiunea
+Setup Progress,Progres configurare
+Settings,Setări
+Force Sync,Sincronizare Forțată
+Active,Activ
+Inactive,Inactiv
+Ready,Pregătit
+Required,Obligatoriu
+Next,Următorul
+Update stock on sale,Actualizare stoc la vânzare
+Automatically deduct local stock when an order is placed on IVO.,Deduce automat stocul local atunci când o comandă este plasată pe IVO.
+"Synced %1 of %2 products...","Sincronizate %1 din %2 produse..."
+"Empty response from sync.","Răspuns gol de la sincronizare."
+"Request failed: %1","Cererea a eșuat: %1"
+"The price modifier changed: re-sending all products to IVO.","Modificatorul de preț s-a schimbat: toate produsele se retrimit la IVO."
+"Products synchronization started successfully.","Sincronizarea produselor a pornit cu succes."
+"IVO Marketplace is not configured.","IVO Marketplace nu este configurat."
+"No Merchant Point is selected. Choose one in the settings below and click Save Config.","Niciun punct comercial nu este selectat. Alegeți unul în setările de mai jos și salvați configurația."
+"All products were sent, but IVO did not close the sync run, so products deleted from the shop stay on IVO until the next Force Sync. %1","Toate produsele au fost trimise, dar IVO nu a închis rularea sincronizării, așa că produsele șterse din magazin rămân pe IVO până la următoarea sincronizare forțată. %1"
+"Could not reach IVO: %1","Nu s-a putut contacta IVO: %1"
+"%1 (currently saved)","%1 (valoarea salvată)"
+"Configurable and grouped products are not sent to IVO themselves: their simple products are. Sync those instead.","Produsele configurabile și grupate nu se trimit la IVO ca atare: se trimit produsele simple din ele. Sincronizați-le pe acestea."
+"IVO Marketplace configured successfully. Merchant Point kept: %1","IVO Marketplace a fost configurat cu succes. Punct comercial păstrat: %1"
+"IVO Marketplace configured, but the Merchant Points could not be loaded. The saved Merchant Point %1 was kept.","IVO Marketplace a fost configurat, dar punctele comerciale nu au putut fi încărcate. Punctul comercial salvat %1 a fost păstrat."
+"IVO Marketplace configured, but the Merchant Points could not be loaded. Reload this page to choose the Merchant Point.","IVO Marketplace a fost configurat, dar punctele comerciale nu au putut fi încărcate. Reîncărcați pagina pentru a alege punctul comercial."
+"IVO Marketplace configured, but the saved Merchant Point %1 is not one of this account's points. Choose the Merchant Point below and click Save Config.","IVO Marketplace a fost configurat, dar punctul comercial salvat %1 nu aparține acestui cont. Alegeți punctul comercial mai jos și salvați configurația."
+"IVO Marketplace configured. Choose the Merchant Point to sync products to below and click Save Config.","IVO Marketplace a fost configurat. Alegeți mai jos punctul comercial în care se sincronizează produsele și salvați configurația."
