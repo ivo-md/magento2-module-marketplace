@@ -42,7 +42,7 @@
 Connect Account,Conectare Cont
 Link your IVO Merchant account.,Asociază contul tău de comerciant IVO.
 Product sync,Sincronizare produse
-Map categories, prices, stock, and images.,Sincronizează categoriile, prețurile, stocul și imaginile.
+"Map categories, prices, stock, and images.","Sincronizează categoriile, prețurile, stocul și imaginile."
 Update stock,Actualizare stoc
 Automatically sync stock between your store and IVO.,Sincronizează automat stocul între magazinul tău și IVO.
 Connected,Conectat
@@ -50,8 +50,6 @@ Configure connection,Configurează conexiunea
 Setup Progress,Progres configurare
 Settings,Setări
 Force Sync,Sincronizare Forțată
-Active,Activ
-Inactive,Inactiv
 Ready,Pregătit
 Required,Obligatoriu
 Next,Următorul
@@ -73,3 +71,25 @@ Automatically deduct local stock when an order is placed on IVO.,Deduce automat 
 "IVO Marketplace configured, but the Merchant Points could not be loaded. Reload this page to choose the Merchant Point.","IVO Marketplace a fost configurat, dar punctele comerciale nu au putut fi încărcate. Reîncărcați pagina pentru a alege punctul comercial."
 "IVO Marketplace configured, but the saved Merchant Point %1 is not one of this account's points. Choose the Merchant Point below and click Save Config.","IVO Marketplace a fost configurat, dar punctul comercial salvat %1 nu aparține acestui cont. Alegeți punctul comercial mai jos și salvați configurația."
 "IVO Marketplace configured. Choose the Merchant Point to sync products to below and click Save Config.","IVO Marketplace a fost configurat. Alegeți mai jos punctul comercial în care se sincronizează produsele și salvați configurația."
+"Your server could not connect to IVO (%1): %2. Ask your hosting provider to allow outgoing HTTPS connections to %1.","Serverul magazinului nu se poate conecta la IVO (%1): %2. Cereți furnizorului de hosting să permită conexiunile HTTPS de ieșire către %1."
+"IVO rejected the API key: it was revoked or is not valid. Click “Configure connection” to connect the store again.","IVO a respins cheia API: a fost revocată sau nu este validă. Apăsați „Configurează conexiunea” pentru a conecta din nou magazinul."
+"The IVO integration of this store is turned off. Turn it on in your IVO merchant account, under Settings → Integrations.","Integrarea IVO a acestui magazin este dezactivată. Activați-o în contul de comerciant IVO, la Setări → Integrări."
+"IVO found no merchant account for this API key. Click “Configure connection” to connect the store again.","IVO nu a găsit contul de comerciant pentru această cheie API. Apăsați „Configurează conexiunea” pentru a conecta din nou magazinul."
+"IVO returned an error (HTTP %1%2). Try again in a few minutes.","IVO a răspuns cu o eroare (HTTP %1%2). Încercați din nou peste câteva minute."
+"The answer from IVO could not be read (HTTP %1). A proxy or firewall on your server may be changing the connection to %2.","Răspunsul de la IVO nu a putut fi citit (HTTP %1). Un proxy sau un firewall de pe server poate modifica conexiunea către %2."
+"Your IVO merchant account has no merchant point. Add one on the Merchant Points page of your IVO merchant account.","Contul de comerciant IVO nu are niciun punct. Adăugați unul pe pagina „Puncte comerciant” din contul IVO."
+"Unable to fetch Merchant Point ID. Please check API Key configuration.","Punctul comercial nu a putut fi obținut. Verificați configurarea cheii API."
+"Product created but still pending approval.","Produsul a fost creat, dar așteaptă încă aprobarea."
+"The product details are too generic to generate a valid listing.","Detaliile produsului sunt prea generale pentru a genera o listare validă."
+"Magento bridge","Conexiune Magento"
+"Connect your store","Conectează-ți magazinul"
+"Link your Magento store to IVO Marketplace to start syncing products and receiving orders automatically.","Conectează magazinul Magento la IVO Marketplace pentru a sincroniza automat produsele și a primi comenzile."
+"API Error:","Eroare API:"
+"Your store is successfully connected to IVO. Use the native Magento form below to modify advanced settings.","Magazinul tău este conectat la IVO. Folosește formularul Magento de mai jos pentru setările avansate."
+"Reconfigure","Reconfigurează"
+"No Merchant Points Found / API Key Missing","Nu au fost găsite puncte comerciale / lipsește cheia API"
+"Configure Plugin","Configurează modulul"
+"IVO Marketplace configured successfully. Merchant Point set to: %1","IVO Marketplace a fost configurat cu succes. Punct comercial setat: %1"
+"IVO Marketplace configured, but failed to auto-select Merchant Point: %1","IVO Marketplace a fost configurat, dar punctul comercial nu a putut fi selectat automat: %1"
+"Invalid API Key received.","Cheia API primită nu este validă."
+"No API Key received.","Nu a fost primită nicio cheie API."

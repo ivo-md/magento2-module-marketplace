@@ -24,8 +24,8 @@
 "Offer was successfully created for the product/variant.","Предложение успешно создано для продукта/варианта."
 "An error occurred during offer creation.","Произошла ошибка при создании предложения."
 "Found existing product, offer creation is pending.","Найден существующий продукт, создание предложения в ожидании."
-"Active","Активный"
-"Inactive","Неактивный"
+"Active","Активен"
+"Inactive","Неактивен"
 "Draft","Черновик"
 "Unknown","Неизвестный"
 "Error","Ошибка"
@@ -42,7 +42,7 @@
 Connect Account,Подключить аккаунт
 Link your IVO Merchant account.,Привяжите свой аккаунт продавца IVO.
 Product sync,Синхронизация продуктов
-Map categories, prices, stock, and images.,Синхронизация категорий, цен, запасов и изображений.
+"Map categories, prices, stock, and images.","Синхронизация категорий, цен, запасов и изображений."
 Update stock,Обновление запасов
 Automatically sync stock between your store and IVO.,Автоматическая синхронизация запасов между вашим магазином и IVO.
 Connected,Подключен
@@ -50,8 +50,6 @@ Configure connection,Настроить подключение
 Setup Progress,Прогресс настройки
 Settings,Настройки
 Force Sync,Принудительная синхронизация
-Active,Активен
-Inactive,Неактивен
 Ready,Готов
 Required,Требуется
 Next,Далее
@@ -73,3 +71,25 @@ Automatically deduct local stock when an order is placed on IVO.,Автомат�
 "IVO Marketplace configured, but the Merchant Points could not be loaded. Reload this page to choose the Merchant Point.","IVO Marketplace настроен, но не удалось загрузить торговые точки. Перезагрузите страницу, чтобы выбрать торговую точку."
 "IVO Marketplace configured, but the saved Merchant Point %1 is not one of this account's points. Choose the Merchant Point below and click Save Config.","IVO Marketplace настроен, но сохранённая торговая точка %1 не принадлежит этому аккаунту. Выберите торговую точку ниже и сохраните конфигурацию."
 "IVO Marketplace configured. Choose the Merchant Point to sync products to below and click Save Config.","IVO Marketplace настроен. Выберите ниже торговую точку для синхронизации товаров и сохраните конфигурацию."
+"Your server could not connect to IVO (%1): %2. Ask your hosting provider to allow outgoing HTTPS connections to %1.","Сервер магазина не может подключиться к IVO (%1): %2. Попросите хостинг-провайдера разрешить исходящие HTTPS-соединения к %1."
+"IVO rejected the API key: it was revoked or is not valid. Click “Configure connection” to connect the store again.","IVO отклонил API-ключ: он отозван или недействителен. Нажмите «Настроить подключение», чтобы подключить магазин заново."
+"The IVO integration of this store is turned off. Turn it on in your IVO merchant account, under Settings → Integrations.","Интеграция IVO для этого магазина отключена. Включите её в аккаунте продавца IVO: Настройки → Интеграции."
+"IVO found no merchant account for this API key. Click “Configure connection” to connect the store again.","IVO не нашёл аккаунт продавца для этого API-ключа. Нажмите «Настроить подключение», чтобы подключить магазин заново."
+"IVO returned an error (HTTP %1%2). Try again in a few minutes.","IVO вернул ошибку (HTTP %1%2). Повторите попытку через несколько минут."
+"The answer from IVO could not be read (HTTP %1). A proxy or firewall on your server may be changing the connection to %2.","Не удалось прочитать ответ IVO (HTTP %1). Прокси или файрвол на сервере может изменять соединение с %2."
+"Your IVO merchant account has no merchant point. Add one on the Merchant Points page of your IVO merchant account.","В аккаунте продавца IVO нет ни одного пункта. Добавьте его на странице «Пункты продавца» в аккаунте IVO."
+"Unable to fetch Merchant Point ID. Please check API Key configuration.","Не удалось получить торговую точку. Проверьте настройку API-ключа."
+"Product created but still pending approval.","Товар создан, но ещё ожидает одобрения."
+"The product details are too generic to generate a valid listing.","Описание товара слишком общее, чтобы создать корректное объявление."
+"Magento bridge","Мост Magento"
+"Connect your store","Подключите свой магазин"
+"Link your Magento store to IVO Marketplace to start syncing products and receiving orders automatically.","Подключите магазин Magento к IVO Marketplace, чтобы автоматически синхронизировать товары и получать заказы."
+"API Error:","Ошибка API:"
+"Your store is successfully connected to IVO. Use the native Magento form below to modify advanced settings.","Ваш магазин подключён к IVO. Используйте форму Magento ниже для дополнительных настроек."
+"Reconfigure","Перенастроить"
+"No Merchant Points Found / API Key Missing","Торговые точки не найдены / отсутствует API-ключ"
+"Configure Plugin","Настроить модуль"
+"IVO Marketplace configured successfully. Merchant Point set to: %1","IVO Marketplace успешно настроен. Выбрана торговая точка: %1"
+"IVO Marketplace configured, but failed to auto-select Merchant Point: %1","IVO Marketplace настроен, но не удалось автоматически выбрать торговую точку: %1"
+"Invalid API Key received.","Получен недействительный API-ключ."
+"No API Key received.","API-ключ не получен."

@@ -41,7 +41,8 @@ class Actions extends Field
         if ($isConfigured) {
             $merchantInfo = $this->_ivoHelper->checkApiKey();
             if (isset($merchantInfo['error'])) {
-                $apiError = $merchantInfo['error'];
+                // The reason in the admin's language; the raw answer is in the log
+                $apiError = $this->_ivoHelper->getApiCheckError() ?: (string)$merchantInfo['error'];
             }
         }
         
@@ -286,6 +287,10 @@ class Actions extends Field
   background: #ecfdf5 !important;
   color: #059669 !important;
 }
+.ivo-card__tag--error {
+  background: #fef2f2 !important;
+  color: #dc2626 !important;
+}
 @media (max-width: 800px) {
   .ivo-card__setup { flex: 1 1 100%; }
 }
@@ -318,7 +323,7 @@ class Actions extends Field
             
             if ($apiError) {
                 $html .= '<div style="background: #fee2e2; border-left: 4px solid #ef4444; color: #991b1b; padding: 12px 16px; margin-bottom: 24px; border-radius: 4px;">';
-                $html .= '<strong>' . __('API Error:') . '</strong> ' . htmlspecialchars($apiError);
+                $html .= '<strong>' . __('API Error:') . '</strong> ' . $this->escapeHtml($apiError);
                 $html .= '</div>';
             }
             
@@ -346,7 +351,10 @@ class Actions extends Field
         $html .= '<div class="ivo-card__step">';
         $html .= '<div class="ivo-card__step-number">1</div>';
         $html .= '<div><strong>' . __('Connect Account') . '</strong><span>' . __('Link your IVO Merchant account.') . '</span></div>';
-        if ($isConfigured) {
+        if ($isConfigured && $apiError) {
+            // Saved, but IVO could not be reached or refused the key: not a success
+            $html .= '<div class="ivo-card__tag ivo-card__tag--error">' . __('Error') . '</div>';
+        } elseif ($isConfigured) {
             $html .= '<div class="ivo-card__tag ivo-card__tag--success">' . __('Active') . '</div>';
         } else {
             $html .= '<div class="ivo-card__tag ivo-card__tag--active">' . __('Required') . '</div>';
@@ -357,10 +365,11 @@ class Actions extends Field
         $html .= '<div class="ivo-card__step">';
         $html .= '<div class="ivo-card__step-number">2</div>';
         $html .= '<div><strong>' . __('Product sync') . '</strong><span>' . __('Map categories, prices, stock, and images.') . '</span></div>';
-        if ($isConfigured) {
+        // Nothing syncs while IVO cannot be reached or refuses the key
+        if ($isConfigured && !$apiError) {
             $html .= '<div class="ivo-card__tag ivo-card__tag--success">' . __('Active') . '</div>';
         } else {
-            $html .= '<div class="ivo-card__tag">' . __('Next') . '</div>';
+            $html .= '<div class="ivo-card__tag">' . ($isConfigured ? __('Inactive') : __('Next')) . '</div>';
         }
         $html .= '</div>';
 
@@ -368,7 +377,7 @@ class Actions extends Field
         $html .= '<div class="ivo-card__step">';
         $html .= '<div class="ivo-card__step-number">3</div>';
         $html .= '<div><strong>' . __('Update stock') . '</strong><span>' . __('Automatically sync stock between your store and IVO.') . '</span></div>';
-        if ($isConfigured && $updateStock) {
+        if ($isConfigured && !$apiError && $updateStock) {
             $html .= '<div class="ivo-card__tag ivo-card__tag--success">' . __('Active') . '</div>';
         } else {
             if ($isConfigured) {

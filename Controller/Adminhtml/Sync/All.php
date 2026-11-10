@@ -57,7 +57,7 @@ class All extends Action implements HttpPostActionInterface
                 return $result->setData(['error' => (string)__('IVO Marketplace is not configured.')]);
             }
             if (!$this->_ivoHelper->getMerchantPointId()) {
-                return $result->setData(['error' => (string)__('No Merchant Point is selected. Choose one in the settings below and click Save Config.')]);
+                return $result->setData(['error' => $this->_ivoHelper->getMerchantPointError()]);
             }
 
             if ($runId === '') {

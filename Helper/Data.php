@@ -101,6 +101,7 @@ class Data extends AbstractHelper
         curl_setopt($ch, CURLOPT_URL, $this->getApiBaseUrl() . "/v1/merchant-api/merchant-points");
         $headers = [
             "Authorization: Bearer " . $apiKey,
+            "X-IVO-Plugin: magento/" . Config::PLUGIN_VERSION,
             "Accept: application/json"
         ];
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
@@ -172,6 +173,7 @@ class Data extends AbstractHelper
         curl_setopt($ch, CURLOPT_URL, $this->getApiBaseUrl() . "/v1/merchant-api/product/sync-multiple");
         $headers = [
             "Authorization: Bearer " . $apiKey,
+            "X-IVO-Plugin: magento/" . Config::PLUGIN_VERSION,
             "Accept: application/json",
             "Content-Type: application/json"
         ];
@@ -203,6 +205,7 @@ class Data extends AbstractHelper
         curl_setopt($ch, CURLOPT_URL, $this->getApiBaseUrl() . "/v1/merchant-api/product/info-by-sku");
         $headers = [
             "Authorization: Bearer " . $apiKey,
+            "X-IVO-Plugin: magento/" . Config::PLUGIN_VERSION,
             "Accept: application/json",
             "Content-Type: application/json"
         ];

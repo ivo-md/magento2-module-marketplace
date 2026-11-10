@@ -56,6 +56,8 @@ class Callback extends Action implements HttpGetActionInterface
                             } else {
                                 $this->messageManager->addWarningMessage(__('IVO Marketplace configured, but the Merchant Points could not be loaded. Reload this page to choose the Merchant Point.'));
                             }
+                            // Why they could not be loaded: the connection, the key, the integration
+                            $this->messageManager->addErrorMessage($this->_ivoHelper->getMerchantPointError());
                         } elseif ($storedPointId !== '' && isset($pointNames[$storedPointId])) {
                             $this->messageManager->addSuccessMessage(__('IVO Marketplace configured successfully. Merchant Point kept: %1', $pointNames[$storedPointId]));
                         } elseif ($storedPointId !== '') {
@@ -68,7 +70,8 @@ class Callback extends Action implements HttpGetActionInterface
                         } elseif (count($pointsList) > 1) {
                             $this->messageManager->addWarningMessage(__('IVO Marketplace configured. Choose the Merchant Point to sync products to below and click Save Config.'));
                         } else {
-                            $this->messageManager->addWarningMessage(__('IVO Marketplace configured, but no Merchant Points found. Debug: %1', 'No data'));
+                            // The account has no point at all
+                            $this->messageManager->addWarningMessage($this->_ivoHelper->getMerchantPointError());
                         }
                     } catch (\Exception $e) {
                          $this->messageManager->addWarningMessage(__('IVO Marketplace configured, but failed to auto-select Merchant Point: %1', $e->getMessage()));

@@ -39,6 +39,10 @@ class Config extends AbstractHelper
     const URL_SETUP = 'https://www.ivo.md/merchant/plugin/setup';
     const API_BASE_URL = 'https://a.ivo.md';
 
+    // Sent to IVO on every call, so IVO can tell merchants when an update is out.
+    // build.sh keeps it equal to setup_version in etc/module.xml
+    const PLUGIN_VERSION = '1.0.14';
+
     public function getApiBaseUrl()
     {
         return getenv('IVO_API_URL') ?: self::API_BASE_URL;
@@ -54,6 +58,13 @@ class Config extends AbstractHelper
 
     // The point picked when none is stored, resolved once per request (false = not yet)
     private $_fallbackMerchantPointId = false;
+
+    // Why no merchant point could be used, for getMerchantPointError():
+    // ['code' => ..., 'status' => HTTP code, 'detail' => cURL error or IVO's message]
+    private $_pointsFailure = null;
+
+    // Why the last API key check failed, same shape as $_pointsFailure
+    private $_checkFailure = null;
 
     public function __construct(
         Context $context,
@@ -196,10 +207,12 @@ class Config extends AbstractHelper
      */
     public function checkApiKey($apiKey = null)
     {
+        $this->_checkFailure = null;
         if (!$apiKey) {
             $apiKey = $this->getApiKey();
         }
         if (!$apiKey) {
+            $this->_checkFailure = ['code' => 'no_api_key'];
             return ['error' => 'No API key configured'];
         }
 
@@ -207,6 +220,7 @@ class Config extends AbstractHelper
         curl_setopt($ch, CURLOPT_URL, $this->getApiBaseUrl() . "/v1/merchant-api/check");
         $headers = [
             "Authorization: Bearer " . $apiKey,
+            "X-IVO-Plugin: magento/" . self::PLUGIN_VERSION,
             "Accept: application/json"
         ];
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
@@ -216,37 +230,49 @@ class Config extends AbstractHelper
         curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 
         $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $curlError = curl_error($ch);
         curl_close($ch);
 
-        if ($curlError) {
-            return ['error' => 'cURL error: ' . $curlError];
-        }
-
-        if ($httpCode !== 200) {
-            return ['error' => 'HTTP ' . $httpCode . ' - ' . substr($response, 0, 200)];
-        }
-
-        $data = json_decode($response, true);
-        if (isset($data['merchant_id'])) {
+        $data = ($response === false || $httpCode === 0) ? null : json_decode((string)$response, true);
+        if ($httpCode === 200 && is_array($data) && isset($data['merchant_id'])) {
             return $data;
         }
 
-        return ['error' => 'Invalid API response: ' . substr($response, 0, 200)];
+        // The admin reads the reason (getApiCheckError); the raw answer goes to the log
+        $this->_checkFailure = $this->classifyFailure($response, $httpCode, $curlError);
+        $this->_logger->error(sprintf(
+            'IVO Marketplace: API key check failed: HTTP %d%s, response: %s',
+            $httpCode,
+            $curlError ? ' (' . $curlError . ')' : '',
+            mb_substr((string)$response, 0, 500)
+        ));
+
+        if ($curlError || $response === false || $httpCode === 0) {
+            return ['error' => 'cURL error: ' . $curlError];
+        }
+        if ($httpCode !== 200) {
+            return ['error' => 'HTTP ' . $httpCode . ' - ' . substr((string)$response, 0, 200)];
+        }
+        return ['error' => 'Invalid API response: ' . substr((string)$response, 0, 200)];
     }
 
     public function fetchMerchantPoints($apiKey = null)
     {
+        $this->_pointsFailure = null;
         if (!$apiKey) {
             $apiKey = $this->getApiKey();
         }
-        if (!$apiKey) return [];
+        if (!$apiKey) {
+            $this->_pointsFailure = ['code' => 'no_api_key'];
+            return null;
+        }
 
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $this->getApiBaseUrl() . "/v1/merchant-api/merchant-points");
         $headers = [
             "Authorization: Bearer " . $apiKey,
+            "X-IVO-Plugin: magento/" . self::PLUGIN_VERSION,
             "Accept: application/json"
         ];
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
@@ -255,10 +281,19 @@ class Config extends AbstractHelper
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
 
         $response = curl_exec($ch);
+        $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
         $this->_logger->info('IVO RAW RESPONSE: ' . $response);
         curl_close($ch);
 
-        $data = json_decode($response, true);
+        // Every way this can fail is kept, so the admin reads the real reason
+        $data = ($response === false || $httpCode === 0) ? null : json_decode((string)$response, true);
+        if ($httpCode !== 200 || !is_array($data)) {
+            $this->_pointsFailure = $this->classifyFailure($response, $httpCode, $curlError);
+            $this->logPointsFailure($httpCode, $curlError, $response);
+            return null;
+        }
+
         if (is_array($data)) {
             // Normalize points if present
             if (isset($data['points']) && is_array($data['points'])) {
@@ -307,6 +342,7 @@ class Config extends AbstractHelper
         } elseif ($response === [] || isset($response[0])) {
             $list = $response;
         } else {
+            $this->_pointsFailure = ['code' => 'unreadable', 'status' => 200, 'detail' => ''];
             return null;
         }
 
@@ -316,7 +352,139 @@ class Config extends AbstractHelper
                 $points[] = $point;
             }
         }
+        if (empty($points)) {
+            $this->_pointsFailure = ['code' => 'no_points', 'status' => 200, 'detail' => ''];
+        }
         return $points;
+    }
+
+    /**
+     * Why no merchant point could be used, in the admin's language: the
+     * connection error, IVO's refusal, or the setting still to be chosen.
+     */
+    public function getMerchantPointError()
+    {
+        list($text, $args) = $this->merchantPointErrorParts();
+        return (string)__($text, ...$args);
+    }
+
+    /**
+     * True when the last lookup could not reach or use IVO, rather than
+     * finding several points for the admin to choose from
+     */
+    public function merchantPointsFailed()
+    {
+        return is_array($this->_pointsFailure) && $this->_pointsFailure['code'] !== 'choose_point';
+    }
+
+    /**
+     * Why the API key check failed, in the admin's language (same reasons as
+     * the merchant point lookup); empty when the check passed or did not run
+     */
+    public function getApiCheckError()
+    {
+        if (!is_array($this->_checkFailure)) {
+            return '';
+        }
+        list($text, $args) = $this->failureMessageParts($this->_checkFailure);
+        return (string)__($text, ...$args);
+    }
+
+    /**
+     * What a failed call to IVO means: no connection, a refusal IVO names,
+     * another HTTP error, or an answer that is not IVO's JSON
+     */
+    private function classifyFailure($response, $httpCode, $curlError)
+    {
+        if ($response === false || (int)$httpCode === 0) {
+            return ['code' => 'network', 'status' => 0, 'detail' => (string)$curlError];
+        }
+
+        $data = json_decode((string)$response, true);
+        $message = (is_array($data) && isset($data['message']) && is_string($data['message'])) ? $data['message'] : '';
+        $codes = [
+            'api_key_invalid' => 'key_invalid',
+            'api_key_missing' => 'key_invalid',
+            'integration_disabled' => 'integration_disabled',
+            'merchant_not_found' => 'merchant_not_found',
+        ];
+        if (isset($codes[$message])) {
+            $code = $codes[$message];
+        } elseif (is_array($data) && (int)$httpCode !== 200) {
+            $code = 'http';
+        } else {
+            $code = 'unreadable';
+        }
+        return ['code' => $code, 'status' => (int)$httpCode, 'detail' => $message];
+    }
+
+    /**
+     * The untranslated text and its %1/%2 values for the current failure
+     */
+    private function merchantPointErrorParts()
+    {
+        $failure = $this->_pointsFailure;
+        if (!$this->getApiKey()) {
+            $failure = ['code' => 'no_api_key'];
+        } elseif (!is_array($failure)) {
+            $failure = ['code' => 'unknown'];
+        }
+        return $this->failureMessageParts($failure);
+    }
+
+    /**
+     * The untranslated text and its %1/%2 values for a failure
+     */
+    private function failureMessageParts(array $failure)
+    {
+        $host = parse_url($this->getApiBaseUrl(), PHP_URL_HOST) ?: $this->getApiBaseUrl();
+        $status = isset($failure['status']) ? (int)$failure['status'] : 0;
+        $detail = isset($failure['detail']) ? trim((string)$failure['detail']) : '';
+
+        switch ($failure['code']) {
+            case 'network':
+                return ['Your server could not connect to IVO (%1): %2. Ask your hosting provider to allow outgoing HTTPS connections to %1.', [$host, $detail !== '' ? $detail : 'no response']];
+            case 'key_invalid':
+                return ['IVO rejected the API key: it was revoked or is not valid. Click “Configure connection” to connect the store again.', []];
+            case 'integration_disabled':
+                return ['The IVO integration of this store is turned off. Turn it on in your IVO merchant account, under Settings → Integrations.', []];
+            case 'merchant_not_found':
+                return ['IVO found no merchant account for this API key. Click “Configure connection” to connect the store again.', []];
+            case 'http':
+                return ['IVO returned an error (HTTP %1%2). Try again in a few minutes.', [$status, $detail !== '' ? ': ' . $detail : '']];
+            case 'unreadable':
+                return ['The answer from IVO could not be read (HTTP %1). A proxy or firewall on your server may be changing the connection to %2.', [$status, $host]];
+            case 'no_points':
+                return ['Your IVO merchant account has no merchant point. Add one on the Merchant Points page of your IVO merchant account.', []];
+            case 'choose_point':
+                return ['No Merchant Point is selected. Choose one in the settings below and click Save Config.', []];
+            case 'no_api_key':
+                return ['IVO Marketplace is not configured.', []];
+        }
+        return ['Unable to fetch Merchant Point ID. Please check API Key configuration.', []];
+    }
+
+    /**
+     * The failure in English, for the log
+     */
+    private function merchantPointErrorEnglish()
+    {
+        list($text, $args) = $this->merchantPointErrorParts();
+        $replace = [];
+        foreach (array_values($args) as $i => $value) {
+            $replace['%' . ($i + 1)] = (string)$value;
+        }
+        return strtr($text, $replace);
+    }
+
+    private function logPointsFailure($httpCode, $curlError, $response)
+    {
+        $this->_logger->error(sprintf(
+            'IVO Marketplace: merchant points request failed: HTTP %d%s, response: %s',
+            $httpCode,
+            $curlError ? ' (' . $curlError . ')' : '',
+            mb_substr((string)$response, 0, 500)
+        ));
     }
 
     public function getStoredMerchantPointId()
@@ -343,10 +511,11 @@ class Config extends AbstractHelper
                 $this->_fallbackMerchantPointId = (string)$points[0]['id'];
             } else {
                 $this->_fallbackMerchantPointId = null;
+                if (is_array($points) && count($points) > 1) {
+                    $this->_pointsFailure = ['code' => 'choose_point'];
+                }
                 $this->_logger->warning(
-                    'IVO Marketplace: no Merchant Point selected'
-                    . (is_array($points) ? ' (the account has ' . count($points) . ' points)' : ' (the point list could not be fetched)')
-                    . '; nothing is pushed to IVO until one is chosen in Stores > Configuration > IVO Marketplace.'
+                    'IVO Marketplace: nothing is pushed to IVO: ' . $this->merchantPointErrorEnglish()
                 );
             }
         }
@@ -756,6 +925,7 @@ class Config extends AbstractHelper
         curl_setopt($ch, CURLOPT_URL, $this->getApiBaseUrl() . $path);
         $headers = [
             "Authorization: Bearer " . $apiKey,
+            "X-IVO-Plugin: magento/" . self::PLUGIN_VERSION,
             "Accept: application/json",
             "Content-Type: application/json"
         ];
@@ -869,6 +1039,7 @@ class Config extends AbstractHelper
         curl_setopt($ch, CURLOPT_URL, $url);
         $headers = [
             "Authorization: Bearer " . $apiKey,
+            "X-IVO-Plugin: magento/" . self::PLUGIN_VERSION,
             "Accept: application/json",
             "Content-Type: application/json"
         ];

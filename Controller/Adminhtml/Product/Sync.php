@@ -45,7 +45,8 @@ class Sync extends Action
             $payload = $this->helper->prepareProductPayload($product);
             
             if (!$payload) {
-                return $result->setData(['status' => 'error', 'message' => 'Could not prepare payload or Merchant Point ID missing']);
+                // prepareProductPayload is null only without a merchant point: say why there is none
+                return $result->setData(['status' => 'error', 'message' => $this->helper->getMerchantPointError()]);
             }
 
             // What IVO checks is the price sent (special price, modifier), not the catalog price

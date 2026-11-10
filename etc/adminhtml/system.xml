@@ -25,6 +25,7 @@
                 </field>
                 <field id="merchant_point_id" translate="label" type="select" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Merchant Point</label>
+                    <frontend_model>Ivo\Marketplace\Block\Adminhtml\System\Config\MerchantPoint</frontend_model>
                     <source_model>Ivo\Marketplace\Model\Config\Source\MerchantPoints</source_model>
                 </field>
                 <field id="price_modifier" translate="label" type="text" sortOrder="35" showInDefault="1" showInWebsite="1" showInStore="1">

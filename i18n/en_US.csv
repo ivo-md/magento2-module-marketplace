@@ -42,7 +42,7 @@
 Connect Account,Connect Account
 Link your IVO Merchant account.,Link your IVO Merchant account.
 Product sync,Product sync
-Map categories, prices, stock, and images.,Map categories, prices, stock, and images.
+"Map categories, prices, stock, and images.","Map categories, prices, stock, and images."
 Update stock,Update stock
 Automatically sync stock between your store and IVO.,Automatically sync stock between your store and IVO.
 Connected,Connected
@@ -50,8 +50,6 @@ Configure connection,Configure connection
 Setup Progress,Setup Progress
 Settings,Settings
 Force Sync,Force Sync
-Active,Active
-Inactive,Inactive
 Ready,Ready
 Required,Required
 Next,Next
@@ -73,3 +71,25 @@ Automatically deduct local stock when an order is placed on IVO.,Automatically d
 "IVO Marketplace configured, but the Merchant Points could not be loaded. Reload this page to choose the Merchant Point.","IVO Marketplace configured, but the Merchant Points could not be loaded. Reload this page to choose the Merchant Point."
 "IVO Marketplace configured, but the saved Merchant Point %1 is not one of this account's points. Choose the Merchant Point below and click Save Config.","IVO Marketplace configured, but the saved Merchant Point %1 is not one of this account's points. Choose the Merchant Point below and click Save Config."
 "IVO Marketplace configured. Choose the Merchant Point to sync products to below and click Save Config.","IVO Marketplace configured. Choose the Merchant Point to sync products to below and click Save Config."
+"Your server could not connect to IVO (%1): %2. Ask your hosting provider to allow outgoing HTTPS connections to %1.","Your server could not connect to IVO (%1): %2. Ask your hosting provider to allow outgoing HTTPS connections to %1."
+"IVO rejected the API key: it was revoked or is not valid. Click “Configure connection” to connect the store again.","IVO rejected the API key: it was revoked or is not valid. Click “Configure connection” to connect the store again."
+"The IVO integration of this store is turned off. Turn it on in your IVO merchant account, under Settings → Integrations.","The IVO integration of this store is turned off. Turn it on in your IVO merchant account, under Settings → Integrations."
+"IVO found no merchant account for this API key. Click “Configure connection” to connect the store again.","IVO found no merchant account for this API key. Click “Configure connection” to connect the store again."
+"IVO returned an error (HTTP %1%2). Try again in a few minutes.","IVO returned an error (HTTP %1%2). Try again in a few minutes."
+"The answer from IVO could not be read (HTTP %1). A proxy or firewall on your server may be changing the connection to %2.","The answer from IVO could not be read (HTTP %1). A proxy or firewall on your server may be changing the connection to %2."
+"Your IVO merchant account has no merchant point. Add one on the Merchant Points page of your IVO merchant account.","Your IVO merchant account has no merchant point. Add one on the Merchant Points page of your IVO merchant account."
+"Unable to fetch Merchant Point ID. Please check API Key configuration.","Unable to fetch Merchant Point ID. Please check API Key configuration."
+"Product created but still pending approval.","Product created but still pending approval."
+"The product details are too generic to generate a valid listing.","The product details are too generic to generate a valid listing."
+"Magento bridge","Magento bridge"
+"Connect your store","Connect your store"
+"Link your Magento store to IVO Marketplace to start syncing products and receiving orders automatically.","Link your Magento store to IVO Marketplace to start syncing products and receiving orders automatically."
+"API Error:","API Error:"
+"Your store is successfully connected to IVO. Use the native Magento form below to modify advanced settings.","Your store is successfully connected to IVO. Use the native Magento form below to modify advanced settings."
+"Reconfigure","Reconfigure"
+"No Merchant Points Found / API Key Missing","No Merchant Points Found / API Key Missing"
+"Configure Plugin","Configure Plugin"
+"IVO Marketplace configured successfully. Merchant Point set to: %1","IVO Marketplace configured successfully. Merchant Point set to: %1"
+"IVO Marketplace configured, but failed to auto-select Merchant Point: %1","IVO Marketplace configured, but failed to auto-select Merchant Point: %1"
+"Invalid API Key received.","Invalid API Key received."
+"No API Key received.","No API Key received."
